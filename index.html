@@ -127,6 +127,15 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 /* LOGIN MODAL */
 #loginModal input { margin:0.5rem 0; }
 #loginModal button { background:#111; color:white; margin-top:1rem; }
+  
+/* Show edit/delete buttons permanently on mobile */
+@media (max-width: 768px) {
+  .bill-actions {
+    opacity: 1 !important;  /* override hover opacity */
+    pointer-events: auto;    /* ensure they are clickable */
+  }
+}
+
 </style>
 </head>
 <body>
