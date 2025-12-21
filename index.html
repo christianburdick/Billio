@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Budget Dashboard</title>
+<style>
+* { box-sizing:border-box; font-family: system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
+body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
+.container { max-width:420px; margin:auto; display:none; }
+
+/* HERO */
+.hero { background:white; border-radius:20px; padding:2rem; text-align:center; margin-bottom:1.5rem; }
+.hero-amount { font-size:3rem; font-weight:700; }
+.hero-amount.negative { color:#c0392b; }
+.hero-label { font-size:0.9rem; color:#666; }
+.hero-sub { font-size:0.8rem; color:#888; margin-top:0.4rem; }
+
+/* CONTEXT */
+.context { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; }
+.context-card { background:white; border-radius:16px; padding:1rem; text-align:center; }
+.context-value { font-size:1.25rem; font-weight:600; }
+.context-label { font-size:0.8rem; color:#666; }
+
+/* BILLS */
+.bills { background:white; border-radius:20px; padding:1.5rem; margin-bottom:1rem; }
+.bills-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.bills-header h2 { margin:0; font-size:1.1rem; }
+.toggle { font-size:0.8rem; color:#666; }
+.bill-list { margin-top:1rem; display:none; }
+
+/* BILL ITEM */
+.bill-wrapper { position: relative; overflow: hidden; }
+.bill { padding:0.75rem 0; border-bottom:1px solid #eee; background:white; transition: transform 0.3s ease; display:flex; flex-direction:column; }
+.bill:last-child { border-bottom:none; }
+.bill-main { display:flex; justify-content:space-between; align-items:center; width:100%; }
+.bill-actions { display:flex; gap:0.5rem; opacity:0; transition: opacity 0.2s; }
+.bill:hover .bill-actions { opacity:1; }
+.icon-btn { background:none; border:none; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; }
+.icon-btn svg { width:20px; height:20px; fill:#555; transition: fill 0.2s; }
+.icon-btn:hover svg { fill:#111; }
+.chip { background:#e6e7eb; padding:2px 6px; border-radius:12px; font-size:0.65rem; margin-right:3px; }
+
+/* CONTROLS */
+.controls { position:fixed; bottom:0; left:0; right:0; background:white; padding:0.75rem; display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; }
+.controls button { padding:0.6rem; border-radius:10px; border:none; font-size:0.75rem; cursor:pointer; }
+.primary { background:#111; color:white; }
+.secondary { background:#e6e7eb; }
+.logout-btn { background: none; border: none; color: #888; font-size: 0.75rem; }
+
+/* MODALS */
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:none; justify-content:center; align-items:flex-end; z-index:1000; }
+.modal { background:white; border-radius:20px 20px 0 0; width:100%; max-width:420px; padding:2rem; max-height:90vh; overflow-y:auto; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+.modal-header h3 { margin:0; font-size:1.2rem; }
+.close-btn { cursor:pointer; font-weight:bold; font-size:1.2rem; }
+.modal input, .modal select { width:100%; padding:0.5rem; margin:0.5rem 0; border-radius:8px; border:1px solid #ddd; }
+.modal button { margin-top:1rem; padding:0.6rem; border:none; border-radius:10px; background:#111; color:white; width:100%; cursor:pointer; }
+
+/* LOGIN MODAL */
+#loginModal input { margin:0.5rem 0; }
+#loginModal button { background:#111; color:white; margin-top:1rem; }
+</style>
+</head>
+<body>
+
+<!-- DASHBOARD -->
+<div class="container" id="dashboard">
+  <section class="hero">
+    <div class="hero-amount" id="spendingLeft">$0.00</div>
+    <div class="hero-label" id="heroIncomeLabel">Spending Money Left</div>
+    <div class="hero-sub" id="heroSubText">This period</div>
+  </section>
+
+  <section class="context">
+    <div class="context-card">
+      <div class="context-value" id="incomeValue">$0.00</div>
+      <div class="context-label" id="incomeLabel">Income</div>
+    </div>
+    <div class="context-card">
+      <div class="context-value" id="billsValue">$0.00</div>
+      <div class="context-label">Total Bills</div>
+    </div>
+  </section>
+
+  <section class="bills">
+    <div class="bills-header" onclick="toggleBills()">
+      <h2>Bill Details</h2>
+      <span class="toggle" id="toggleText">Show</span>
+    </div>
+    <div class="bill-list" id="billList"></div>
+  </section>
+</div>
+
+<section class="controls">
+  <button class="secondary" onclick="showModal('incomeModal')">Income</button>
+  <button class="secondary" id="addBillBtn" onclick="showModal('billsModal')">Add Bill</button>
+  <button class="logout-btn" onclick="logout()">Log Out</button>
+</section>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="incomeModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Edit Income</h3><span class="close-btn" onclick="closeModal('incomeModal')">&times;</span></div>
+    <input type="number" id="incomeAmount" placeholder="Income Amount">
+    <select id="incomeFrequency">
+      <option value="weekly">Weekly</option>
+      <option value="biweekly">Biweekly</option>
+      <option value="monthly">Monthly</option>
+    </select>
+    <input type="date" id="nextPayday">
+    <button onclick="saveIncome()">Save</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="billsModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Manage Bills</h3><span class="close-btn" onclick="closeModal('billsModal')">&times;</span></div>
+    <input type="text" id="newBillName" placeholder="Bill Name">
+    <input type="number" id="newBillAmount" placeholder="Amount">
+    <select id="newBillFrequency">
+      <option value="weekly">Weekly</option>
+      <option value="biweekly">Biweekly</option>
+      <option value="monthly">Monthly</option>
+    </select>
+    <input type="date" id="newBillStart">
+    <button onclick="addBill()">Save</button>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Welcome</h3></div>
+    <input type="email" id="authEmail" placeholder="Email" />
+    <input type="password" id="authPassword" placeholder="Password" />
+    <button onclick="login()">Log In</button>
+    <button onclick="register()">Register</button>
+  </div>
+</div>
+
+<!-- FIREBASE SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA0UCkq1LBiewo48_mDgFnd2zPs2BbSkfI",
+  authDomain: "budget-calculator-af483.firebaseapp.com",
+  projectId: "budget-calculator-af483",
+  storageBucket: "budget-calculator-af483.firebasestorage.app",
+  messagingSenderId: "560067714902",
+  appId: "1:560067714902:web:b7801e12244f8cffb0c0f7"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let income = { amount: 0, frequency: "monthly", nextPayday: null };
+let bills = [];
+let billsVisible = false;
+let editIndex = null;
+
+// ==================== LOGIN/REGISTER ====================
+function login(){
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value.trim();
+  if(!email || !password) return alert("Enter email and password");
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(err => alert(err.message));
+}
+
+function register(){
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value.trim();
+  if(!email || !password) return alert("Enter email and password");
+  auth.createUserWithEmailAndPassword(email, password)
+    .catch(err => alert(err.message));
+}
+
+function logout(){
+  if(confirm("Log out of your account?")) auth.signOut();
+}
+
+// ==================== AUTH STATE LISTENER ====================
+auth.onAuthStateChanged(user => {
+  const dashboard = document.getElementById("dashboard");
+  const loginModal = document.getElementById("loginModal");
+
+  if(user){
+    loginModal.style.display = "none";
+    dashboard.style.display = "block";
+    loadUserData(user.uid);
+  } else {
+    dashboard.style.display = "none";
+    loginModal.style.display = "flex";
+  }
+});
+
+// ==================== DATA SAVE/LOAD ====================
+function saveUserData(){ db.collection("users").doc(auth.currentUser.uid).set({income, bills}); }
+function loadUserData(uid){
+  db.collection("users").doc(uid).onSnapshot(doc=>{
+    const data = doc.data();
+    if(data){ income = data.income||income; bills = data.bills||bills; recalc(); }
+  });
+}
+
+// ==================== BILLS LOGIC ====================
+function toggleBills(){
+  if(!income.nextPayday){ alert("Please input your income first."); return; }
+  billsVisible = !billsVisible;
+  document.getElementById("billList").style.display = billsVisible ? "block" : "none";
+  document.getElementById("toggleText").textContent = billsVisible ? "Hide" : "Show";
+}
+
+function showModal(id){
+  document.getElementById(id).style.display="flex";
+  if(id==="billsModal" && editIndex===null){
+    document.getElementById("newBillName").value="";
+    document.getElementById("newBillAmount").value="";
+    document.getElementById("newBillStart").value="";
+  }
+}
+function closeModal(id){ if(id!=="loginModal") {document.getElementById(id).style.display="none"; editIndex=null;} }
+
+function saveIncome(){
+  const amount = parseFloat(document.getElementById("incomeAmount").value);
+  const frequency = document.getElementById("incomeFrequency").value;
+  const nextPayday = document.getElementById("nextPayday").value;
+  if(isNaN(amount) || !nextPayday){ alert("Invalid input"); return; }
+  income={amount, frequency, nextPayday};
+  saveUserData();
+  closeModal("incomeModal");
+  recalc();
+}
+
+function addBill(){
+  const name = document.getElementById("newBillName").value;
+  const amount = parseFloat(document.getElementById("newBillAmount").value);
+  const frequency = document.getElementById("newBillFrequency").value;
+  const startDate = document.getElementById("newBillStart").value;
+  if(!name || isNaN(amount) || !startDate){ alert("Invalid input"); return; }
+
+  if(editIndex!==null){ bills[editIndex]={name, amount, frequency, date:startDate}; editIndex=null; }
+  else { bills.push({name, amount, frequency, date:startDate}); }
+
+  saveUserData();
+  closeModal("billsModal");
+  recalc();
+}
+
+// ==================== BILL RENDER ====================
+function renderBills(){
+  if(!income.nextPayday) return;
+
+  const [y,m,d] = income.nextPayday.split("-");
+  const start = new Date(y,m-1,d);
+  const end = new Date(start);
+  if(income.frequency==="weekly") end.setDate(start.getDate()+6);
+  if(income.frequency==="biweekly") end.setDate(start.getDate()+13);
+  if(income.frequency==="monthly") end.setMonth(start.getMonth()+1,0);
+
+  const list = document.getElementById("billList");
+  list.innerHTML="";
+
+  if(bills.length===0){ list.innerHTML=`<div style="text-align:center;color:#888;">No bills yet</div>`; return; }
+
+  // Split bills into in-period and out-of-period
+  let inPeriod = [], outPeriod = [];
+
+  bills.forEach(b=>{
+    const [y1,m1,d1] = b.date.split("-");
+    let current = new Date(y1,m1-1,d1);
+    const step = {weekly:7,biweekly:14,monthly:1}[b.frequency];
+    let occursInPeriod = false;
+
+    if(b.frequency==="monthly"){
+      if(current>=start && current<=end) occursInPeriod = true;
+    } else {
+      while(current<=end){
+        if(current>=start) { occursInPeriod = true; break; }
+        current.setDate(current.getDate()+step);
+      }
+    }
+
+    if(occursInPeriod) inPeriod.push(b);
+    else outPeriod.push(b);
+  });
+
+  // Sort in-period bills by next occurrence relative to period start
+  inPeriod.sort((a,b)=>{
+    const aDate = getNextBillDate(a,start);
+    const bDate = getNextBillDate(b,start);
+    return aDate - bDate;
+  });
+
+  // Combine in-period first, then out-of-period
+  const sortedBills = [...inPeriod, ...outPeriod];
+
+  // Render bills
+  sortedBills.forEach((b,i)=>{
+    const billEl = document.createElement("div"); billEl.className="bill-wrapper";
+    const inner = document.createElement("div"); inner.className="bill";
+
+    const [y1,m1,d1]=b.date.split("-");
+    let current = new Date(y1,m1-1,d1);
+    const step={weekly:7,biweekly:14,monthly:1}[b.frequency];
+    const occurrences=[];
+    if(b.frequency==="monthly"){ if(current>=start && current<=end) occurrences.push(new Date(current)); }
+    else { while(current<=end){ if(current>=start) occurrences.push(new Date(current)); current.setDate(current.getDate()+step); } }
+
+    const dateChips = occurrences.map(dt=>`<span class="chip">${dt.toLocaleDateString("en-US",{month:"short", day:"numeric"})}</span>`).join("");
+
+    inner.innerHTML=`
+      <div class="bill-main" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
+        <div style="display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span style="font-weight:500;">${b.name} • ${b.frequency.charAt(0).toUpperCase()+b.frequency.slice(1)}</span>
+          </div>
+          <div class="bill-meta" style="margin-top:2px;">${dateChips}</div>
+        </div>
+        <div style="margin-left:auto; margin-right:0.5rem; display:flex; align-items:center;">
+          <span>$${b.amount.toFixed(2)}</span>
+        </div>
+        <div class="bill-actions" style="display:flex; gap:0.5rem; align-items:center;">
+          <button class="icon-btn" onclick="editBill(${i})"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34a1.25 1.25 0 0 0 0-1.77l-2-2a1.25 1.25 0 0 0-1.77 0l-1.83 1.83 3.75 3.75 1.85-1.81z"/></svg></button>
+          <button class="icon-btn" onclick="deleteBill(${i})"><svg viewBox="0 0 24 24"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-4.5l-1-1z"/></svg></button>
+        </div>
+      </div>`;
+
+    inner.style.opacity = occurrences.length ? 1 : 0.5;
+    billEl.appendChild(inner);
+    list.appendChild(billEl);
+  });
+
+  updateTotals(start,end);
+}
+
+// Helper: get next occurrence of a bill relative to a reference date
+function getNextBillDate(bill, ref){
+  const [y,m,d] = bill.date.split("-");
+  let current = new Date(y,m-1,d);
+  const step = {weekly:7,biweekly:14,monthly:1}[bill.frequency];
+  if(bill.frequency==="monthly"){ return current>=ref ? current : new Date(current.getFullYear(), current.getMonth()+1, current.getDate()); }
+  else { while(current<ref) current.setDate(current.getDate()+step); return current; }
+}
+
+// Totals calculation
+function updateTotals(start,end){
+  let totalBills=0;
+  bills.forEach(b=>{
+    const [y2,m2,d2]=b.date.split("-");
+    let c=new Date(y2,m2-1,d2); 
+    const step={weekly:7,biweekly:14,monthly:1}[b.frequency]; 
+    let count=0;
+    if(b.frequency==="monthly"){ if(c>=start && c<=end) count=1; } 
+    else { while(c<=end){ if(c>=start) count++; c.setDate(c.getDate()+step); } }
+    totalBills += count*b.amount; 
+  });
+
+  const spending = income.amount-totalBills;
+  document.getElementById("spendingLeft").textContent=`$${spending.toFixed(2)}`;
+  document.getElementById("spendingLeft").className="hero-amount"+(spending<0?" negative":"");
+  document.getElementById("incomeValue").textContent=`$${income.amount.toFixed(2)}`;
+  document.getElementById("billsValue").textContent=`$${totalBills.toFixed(2)}`;
+}
+
+function editBill(i){ editIndex=i; showModal("billsModal"); const b=bills[i]; document.getElementById("newBillName").value=b.name; document.getElementById("newBillAmount").value=b.amount; document.getElementById("newBillFrequency").value=b.frequency; document.getElementById("newBillStart").value=b.date; }
+function deleteBill(i){ if(confirm(`Delete bill "${bills[i].name}"?`)){ bills.splice(i,1); saveUserData(); recalc(); } }
+
+function recalc(){ document.getElementById("heroIncomeLabel").textContent="Spending Money Left"; renderBills(); }
+</script>
+</body>
+</html>
