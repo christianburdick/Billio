@@ -200,21 +200,34 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
     gap: 0.5rem;
   }
 
-  /* Ensure bill amounts stay aligned with names */
+  /* Ensure bill amounts and buttons stay in the same row as the bill name */
   .bill-main {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;       /* row layout */
+    align-items: center;       /* vertically center items */
+    justify-content: space-between;
+    width: 100%;
+    gap: 0.5rem;
   }
 
+  /* Optional: prevent bill name from wrapping */
+  .bill-main > div:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+  }
+
+  /* Remove previous last-child margin adjustments */
   .bill-main > div:last-child {
-    margin-top: 0.5rem;
+    margin-top: 0;
     margin-left: 0;
   }
 
   /* Make edit/delete buttons easier for thumb access */
   .icon-row {
-    justify-content: flex-end;
-    margin-top: 0.5rem;
+    margin: 0;
+    display: flex;
+    gap: 0.5rem;
   }
 
   /* Modal input scaling */
@@ -266,7 +279,7 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   }
 }
 
-  /* Billio app name above welcome text */
+/* Billio app name above welcome text */
 #loginModal .modal .app-name {
   font-size: 1rem;
   font-weight: 600;
