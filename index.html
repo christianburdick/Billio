@@ -376,6 +376,9 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
         </h3>
     <input type="email" id="authEmail" placeholder="Email" />
     <input type="password" id="authPassword" placeholder="Password" />
+    <p id="forgotPasswordWrapper" style="text-align:center; margin-top:0.25rem; display:none;">
+      <a href="#" id="forgotPasswordLink" onclick="forgotPassword(event)">Forgot Password?</a>
+    </p>
     <button id="authSubmitBtn" onclick="handleAuth()">Log In</button>
     <p style="text-align:center; margin-top:0.5rem;">
       <span id="authToggleText">Not registered? </span>
@@ -414,24 +417,26 @@ let authMode = "login"; // "login" or "register"
 function toggleAuthMode(e){
   e.preventDefault();
   authMode = authMode === "login" ? "register" : "login";
+  
   const title = document.getElementById("authTitle");
   const submitBtn = document.getElementById("authSubmitBtn");
   const toggleText = document.getElementById("authToggleText");
   const toggleLink = document.getElementById("authToggleLink");
+  const forgotWrapper = document.getElementById("forgotPasswordWrapper");
 
   if(authMode === "login"){
-    // LOGIN: Welcome Back with emoji
     const currentEmoji = title.querySelector(".emoji")?.textContent || "👋";
     title.innerHTML = `<span class="welcome-text">Welcome Back</span> <span class="emoji">${currentEmoji}</span>`;
     submitBtn.textContent = "Log In";
     toggleText.textContent = "Not registered? ";
     toggleLink.textContent = "Register";
+    forgotWrapper.style.display = "block"; // show forgot password
   } else {
-    // REGISTER: Create Account without emoji
     title.innerHTML = `<span class="welcome-text">Create Account</span>`;
     submitBtn.textContent = "Register";
     toggleText.textContent = "Already have an account? ";
     toggleLink.textContent = "Log In";
+    forgotWrapper.style.display = "none"; // hide forgot password
   }
 }
 
@@ -448,6 +453,13 @@ function handleAuth(){
       .catch(err => alert(err.message));
   }
 }
+  
+document.addEventListener("DOMContentLoaded", () => {
+  const forgotWrapper = document.getElementById("forgotPasswordWrapper");
+  // Show forgot password immediately if the modal defaults to login
+  forgotWrapper.style.display = authMode === "login" ? "block" : "none";
+});
+
 
 // ==================== EXISTING DASHBOARD LOGIC ====================
 function logout(){ if(confirm("Log out of your account?")) auth.signOut(); }
@@ -468,6 +480,20 @@ auth.onAuthStateChanged(user => {
     controls.style.display = "none"; // hide controls when logged out
   }
 });
+
+function forgotPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById("authEmail").value.trim();
+  if (!email) return alert("Please enter your email to reset password.");
+
+  auth.sendPasswordResetEmail(email)
+    .then(() => {
+      alert("Password reset email sent! Check your inbox.");
+    })
+    .catch(err => {
+      alert(err.message);
+    });
+}
 
 function saveUserData(){ db.collection("users").doc(auth.currentUser.uid).set({income, bills}); }
 function loadUserData(uid){
