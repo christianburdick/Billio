@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Budget Dashboard</title>
 <style>
 * { box-sizing:border-box; font-family: system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
@@ -124,19 +123,60 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   width: 100%;
   cursor: pointer;
 }
+/* iOS-safe date input containment */
+.date-field {
+  width: 100%;
+  overflow: hidden;         /* prevents iOS bleed */
+  border-radius: 8px;
+}
+
+.date-field input[type="date"] {
+  width: 100%;
+  max-width: 100%;  
+  min-height: 35px;
+  display: block;
+  box-sizing: border-box;
+  -webkit-appearance: none; /* reduces native overflow */
+  appearance: none;
+}
+  
+.input-label {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.5rem;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .modal input,
+  .modal select,
+  .modal textarea,
+  .modal button {
+    font-size: 16px;                 /* prevents iOS zoom */
+    -webkit-text-size-adjust: 100%;
+  }
+}
 
 /* LOGIN MODAL */
 #loginModal input { margin:0.5rem 0; }
 #loginModal button { background:#111; color:white; margin-top:1rem; }
-  
+
+.mobile-only {
+  display: none;
+}
 /* Show edit/delete buttons permanently on mobile */
 @media (max-width: 768px) {
   .bill-actions {
     opacity: 1 !important;  /* override hover opacity */
     pointer-events: auto;    /* ensure they are clickable */
   }
+  
+  /* Default: hide on desktop */
+  .mobile-only {
+    display: block;
+  }
 }
-
+  
 </style>
 </head>
 <body>
@@ -185,7 +225,10 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
       <option value="biweekly">Biweekly</option>
       <option value="monthly">Monthly</option>
     </select>
-    <input type="date" id="nextPayday">
+    <label class="input-label mobile-only">Payday</label>
+    <div class="date-field">
+      <input type="date" id="nextPayday">
+    </div>
     <button onclick="saveIncome()">Save</button>
   </div>
 </div>
@@ -200,7 +243,10 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
       <option value="biweekly">Biweekly</option>
       <option value="monthly">Monthly</option>
     </select>
-    <input type="date" id="newBillStart">
+    <div class="date-field">
+      <label class="input-label mobile-only">Due Date</label>
+      <input type="date" id="newBillStart">
+    </div>
     <button onclick="addBill()">Save</button>
   </div>
 </div>
