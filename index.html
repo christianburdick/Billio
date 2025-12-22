@@ -326,13 +326,17 @@ function logout(){ if(confirm("Log out of your account?")) auth.signOut(); }
 auth.onAuthStateChanged(user => {
   const dashboard = document.getElementById("dashboard");
   const loginModal = document.getElementById("loginModal");
+  const controls = document.querySelector(".controls"); // reference controls
+
   if(user){
     loginModal.style.display = "none";
     dashboard.style.display = "block";
+    controls.style.display = "grid"; // show controls
     loadUserData(user.uid);
   } else {
     dashboard.style.display = "none";
     loginModal.style.display = "flex";
+    controls.style.display = "none"; // hide controls when logged out
   }
 });
 
@@ -557,16 +561,16 @@ renderBills(); }
   
 // ====== WELCOME TITLE ANIMATION ======
 const quirkyAnimals = [
-  "🦄✨", "🦉🧐", "🐸💚", "🦊🔥", "🦩🌸",
-  "🐧🎩", "🐵🤹‍♂️", "🦥😎", "🐺🔥", "🐴💨",
-  "🦔🎵", "🦩🌺", "🐢💤", "🐑🎤", "🦀💎",
-  "🐬🌊", "🦒🎈", "🐇✨", "🦓🎀", "🐖🥳",
+  "🦄✨", "🐉🔮", "🐸💚", "🦊🔥", "🦩🌸",
+  "🐧🎩", "🐹🛷", "🦥😎", "🐱🍕", "🐰💌",
+  "🦔🎵", "🦦🎾", "🐢💤", "🐑🎤", "🦀💎",
+  "🐬🌊", "🦒🎈", "🐇✨", "🦨🧪", "🐒🎨",
   "🦦🎁", "🐝🍯", "🦘🏀", "🐆⚡", "🦉📚",
-  "🦜🧩", "🐋🎷", "🦞🍋", "🐿️🍂", "🦥🎧",
+  "🦜🧩", "🐋🎷", "🦞🍋", "🐊🪵", "🦥🎧",
   "🦔🖌️", "🦦🛁", "🐓🥁", "🦇🌙", "🦉☕",
-  "🐠🌈", "🐌🍄", "🐿️🥜", "🦀🏖️", "🐒🙃",
+  "🐠🌈", "🐌🍄", "🐿️💨", "🦀🏖️", "🐵🎉",
   "🦑🛸", "🐸🎈", "🐧🕺", "🐢🎩", "🦖🔥",
-  "🦉🎤", "🐝🎵", "🦦🏄‍♂️", "🐊🎯", "🦓🍦",
+  "🦉🎤", "🐝🎵", "🦔🪕", "🐊🎯", "🦓🍦",
   "🐍🎩", "🦞🎁"
 ];
 
