@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Billio - Budget Buddy</title>
+
+<!-- Favicon: Cat face emoji -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>">
+  
 <style>
 * { box-sizing:border-box; font-family: system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
 body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
@@ -371,15 +375,24 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
     <div class="modal-header app-header">
       <div class="app-name">Billio</div>
     </div>
-        <h3 id="authTitle">
-          <span class="welcome-text">Welcome</span> <span class="emoji">👋</span>
-        </h3>
+
+    <h3 id="authTitle">
+      <span class="welcome-text">Welcome</span> <span class="emoji">👋</span>
+    </h3>
+   
     <input type="email" id="authEmail" placeholder="Email" />
     <input type="password" id="authPassword" placeholder="Password" />
-    <p id="forgotPasswordWrapper" style="text-align:center; margin-top:0.25rem; display:none;">
+
+    <!-- Forgot password -->
+    <p id="forgotPasswordWrapper" style="text-align:center; margin-top:0.25rem; display:none; font-size:0.9rem;">
       <a href="#" id="forgotPasswordLink" onclick="forgotPassword(event)">Forgot Password?</a>
     </p>
+    
+    <!-- Inline error message -->
+    <div id="authError" style="color:red; font-size:0.8rem; margin-top:0.25rem; display:none; text-align:center;"></div>
+
     <button id="authSubmitBtn" onclick="handleAuth()">Log In</button>
+
     <p style="text-align:center; margin-top:0.5rem;">
       <span id="authToggleText">Not registered? </span>
       <a href="#" id="authToggleLink" onclick="toggleAuthMode(event)">Register</a>
@@ -423,6 +436,11 @@ function toggleAuthMode(e){
   const toggleText = document.getElementById("authToggleText");
   const toggleLink = document.getElementById("authToggleLink");
   const forgotWrapper = document.getElementById("forgotPasswordWrapper");
+  const authError = document.getElementById("authError");
+
+  // Clear any previous error
+  authError.style.display = "none";
+  authError.textContent = "";
 
   if(authMode === "login"){
     const currentEmoji = title.querySelector(".emoji")?.textContent || "👋";
@@ -440,26 +458,66 @@ function toggleAuthMode(e){
   }
 }
 
-function handleAuth(){
+// ==================== HANDLE LOGIN / REGISTER ====================
+function handleAuth() {
   const email = document.getElementById("authEmail").value.trim();
   const password = document.getElementById("authPassword").value.trim();
-  if(!email || !password) return alert("Enter email and password");
+  const authError = document.getElementById("authError");
 
-  if(authMode === "login"){
+  authError.style.display = "none";
+  authError.textContent = "";
+
+  if (!email || !password) {
+    authError.textContent = "Please enter both email and password.";
+    authError.style.display = "block";
+    return;
+  }
+
+  if (authMode === "login") {
     auth.signInWithEmailAndPassword(email, password)
-      .catch(err => alert(err.message));
+      .then(userCredential => {
+        const user = userCredential.user;
+        if (!user.emailVerified) {
+          auth.signOut();
+          authError.textContent = "Please verify your email before logging in. Check your inbox!";
+          authError.style.display = "block";
+        }
+      })
+      .catch(err => {
+        authError.textContent = err.message;
+        authError.style.display = "block";
+      });
   } else {
+    // Registration
     auth.createUserWithEmailAndPassword(email, password)
-      .catch(err => alert(err.message));
+      .then(userCredential => {
+        const user = userCredential.user;
+        user.sendEmailVerification()
+          .then(() => {
+            authError.textContent = "Verification email sent! Please check your inbox before logging in.";
+            authError.style.color = "green"; // optional: green for success
+            authError.style.display = "block";
+            // Switch to login screen
+            if (authMode !== "login") toggleAuthMode({ preventDefault: () => {} });
+          })
+          .catch(err => {
+            authError.textContent = "Failed to send verification email: " + err.message;
+            authError.style.display = "block";
+          });
+      })
+      .catch(err => {
+        authError.textContent = err.message;
+        authError.style.display = "block";
+      });
   }
 }
-  
+
+// ==================== INIT ON PAGE LOAD ====================
 document.addEventListener("DOMContentLoaded", () => {
   const forgotWrapper = document.getElementById("forgotPasswordWrapper");
-  // Show forgot password immediately if the modal defaults to login
+  // Show forgot password immediately if modal defaults to login
   forgotWrapper.style.display = authMode === "login" ? "block" : "none";
 });
-
 
 // ==================== EXISTING DASHBOARD LOGIC ====================
 function logout(){ if(confirm("Log out of your account?")) auth.signOut(); }
