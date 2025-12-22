@@ -70,24 +70,23 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.5);
   display: none;
-  justify-content: center;    /* horizontally center */
-  align-items: center;        /* vertically center to prevent datepicker clipping */
-  padding: 1rem;              /* ensure space around modal on small screens */
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
   z-index: 1000;
 }
 
 .modal {
   background: white;
-  border-radius: 20px 20px 20px 20px; /* keep rounded corners */
+  border-radius: 20px 20px 20px 20px;
   width: 100%;
   max-width: 420px;
   padding: 2rem;
-  max-height: 90vh;          /* ensure modal fits in viewport */
-  overflow-y: auto;          /* scroll if content is too tall */
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
-/* Optional: ensure inputs don't push modal too tall */
 .modal input,
 .modal select {
   width: 100%;
@@ -98,12 +97,10 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   box-sizing: border-box;
 }
 
-/* Modal header */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
 }
 
 .close-btn {
@@ -112,7 +109,6 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   font-size: 1.2rem;
 }
 
-/* Modal buttons */
 .modal button {
   margin-top: 1rem;
   padding: 0.6rem;
@@ -123,10 +119,10 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   width: 100%;
   cursor: pointer;
 }
-/* iOS-safe date input containment */
+
 .date-field {
   width: 100%;
-  overflow: hidden;         /* prevents iOS bleed */
+  overflow: hidden;
   border-radius: 8px;
 }
 
@@ -136,7 +132,7 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   min-height: 35px;
   display: block;
   box-sizing: border-box;
-  -webkit-appearance: none; /* reduces native overflow */
+  -webkit-appearance: none;
   appearance: none;
 }
   
@@ -152,31 +148,26 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   .modal select,
   .modal textarea,
   .modal button {
-    font-size: 16px;                 /* prevents iOS zoom */
+    font-size: 16px;
     -webkit-text-size-adjust: 100%;
   }
 }
 
-/* LOGIN MODAL */
 #loginModal input { margin:0.5rem 0; }
 #loginModal button { background:#111; color:white; margin-top:1rem; }
 
-.mobile-only {
-  display: none;
-}
-/* Show edit/delete buttons permanently on mobile */
+#authToggleText,
+#authToggleLink
+  { font-size: 0.8rem; }
+
+.mobile-only { display: none; }
 @media (max-width: 768px) {
   .bill-actions {
-    opacity: 1 !important;  /* override hover opacity */
-    pointer-events: auto;    /* ensure they are clickable */
+    opacity: 1 !important;
+    pointer-events: auto;
   }
-  
-  /* Default: hide on desktop */
-  .mobile-only {
-    display: block;
-  }
+  .mobile-only { display: block; }
 }
-  
 </style>
 </head>
 <body>
@@ -251,14 +242,19 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   </div>
 </div>
 
-<!-- LOGIN MODAL -->
+<!-- LOGIN MODAL: TOGGLE/SWITCH FORM -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal">
-    <div class="modal-header"><h3>Welcome</h3></div>
+    <div class="modal-header">
+      <h3 id="authTitle"> Welcome 👋</h3>
+    </div>
     <input type="email" id="authEmail" placeholder="Email" />
     <input type="password" id="authPassword" placeholder="Password" />
-    <button onclick="login()">Log In</button>
-    <button onclick="register()">Register</button>
+    <button id="authSubmitBtn" onclick="handleAuth()">Log In</button>
+    <p style="text-align:center; margin-top:0.5rem;">
+      <span id="authToggleText">Not registered? </span>
+      <a href="#" id="authToggleLink" onclick="toggleAuthMode(event)">Register</a>
+    </p>
   </div>
 </div>
 
@@ -286,32 +282,50 @@ let bills = [];
 let billsVisible = false;
 let editIndex = null;
 
-// ==================== LOGIN/REGISTER ====================
-function login(){
+// ==================== LOGIN/REGISTER TOGGLE ====================
+let authMode = "login"; // "login" or "register"
+
+function toggleAuthMode(e){
+  e.preventDefault();
+  authMode = authMode === "login" ? "register" : "login";
+  const title = document.getElementById("authTitle");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  const toggleText = document.getElementById("authToggleText");
+  const toggleLink = document.getElementById("authToggleLink");
+
+  if(authMode === "login"){
+    title.textContent = "Welcome Back";
+    submitBtn.textContent = "Log In";
+    toggleText.textContent = "Not registered? ";
+    toggleLink.textContent = "Register";
+  } else {
+    title.textContent = "Create Account";
+    submitBtn.textContent = "Register";
+    toggleText.textContent = "Already have an account? ";
+    toggleLink.textContent = "Log In";
+  }
+}
+
+function handleAuth(){
   const email = document.getElementById("authEmail").value.trim();
   const password = document.getElementById("authPassword").value.trim();
   if(!email || !password) return alert("Enter email and password");
-  auth.signInWithEmailAndPassword(email, password)
-    .catch(err => alert(err.message));
+
+  if(authMode === "login"){
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(err => alert(err.message));
+  } else {
+    auth.createUserWithEmailAndPassword(email, password)
+      .catch(err => alert(err.message));
+  }
 }
 
-function register(){
-  const email = document.getElementById("authEmail").value.trim();
-  const password = document.getElementById("authPassword").value.trim();
-  if(!email || !password) return alert("Enter email and password");
-  auth.createUserWithEmailAndPassword(email, password)
-    .catch(err => alert(err.message));
-}
+// ==================== EXISTING DASHBOARD LOGIC ====================
+function logout(){ if(confirm("Log out of your account?")) auth.signOut(); }
 
-function logout(){
-  if(confirm("Log out of your account?")) auth.signOut();
-}
-
-// ==================== AUTH STATE LISTENER ====================
 auth.onAuthStateChanged(user => {
   const dashboard = document.getElementById("dashboard");
   const loginModal = document.getElementById("loginModal");
-
   if(user){
     loginModal.style.display = "none";
     dashboard.style.display = "block";
@@ -322,7 +336,6 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// ==================== DATA SAVE/LOAD ====================
 function saveUserData(){ db.collection("users").doc(auth.currentUser.uid).set({income, bills}); }
 function loadUserData(uid){
   db.collection("users").doc(uid).onSnapshot(doc=>{
@@ -331,7 +344,6 @@ function loadUserData(uid){
   });
 }
 
-// ==================== BILLS LOGIC ====================
 function toggleBills(){
   if(!income.nextPayday){ alert("Please input your income first."); return; }
   billsVisible = !billsVisible;
@@ -354,14 +366,8 @@ function saveIncome() {
   const frequency = document.getElementById("incomeFrequency").value;
   const nextPayday = document.getElementById("nextPayday").value;
 
-  if (isNaN(amount) || amount <= 0) {
-    alert("Please enter a valid income amount.");
-    return;
-  }
-  if (!nextPayday) {
-    alert("Please select your next payday.");
-    return;
-  }
+  if (isNaN(amount) || amount <= 0) { alert("Please enter a valid income amount."); return; }
+  if (!nextPayday) { alert("Please select your next payday."); return; }
 
   income = { amount, frequency, nextPayday };
   saveUserData();
@@ -375,7 +381,6 @@ function addBill() {
   const frequency = document.getElementById("newBillFrequency").value;
   const startDate = document.getElementById("newBillStart").value;
 
-  // Field-specific checks
   if (!name) { alert("Please enter a name for your bill."); return; }
   if (isNaN(amount) || amount <= 0) { alert("Please enter a valid amount for the bill."); return; }
   if (!startDate) { alert("Please select a start date for the bill."); return; }
@@ -391,6 +396,7 @@ function addBill() {
   closeModal("billsModal");
   recalc();
 }
+
 
 // ==================== BILL RENDER ====================
 function renderBills() {
@@ -548,6 +554,32 @@ heroSub.textContent = income.frequency === "weekly" ? "This week" :
                       income.frequency === "biweekly" ? "This pay period" :
                       "This month";
 renderBills(); }
+  
+// ====== WELCOME TITLE ANIMATION ======
+const quirkyAnimals = [
+  "🦄✨", "🦉🧐", "🐸💚", "🦊🔥", "🦩🌸",
+  "🐧🎩", "🐵🤹‍♂️", "🦥😎", "🐺🔥", "🐴💨",
+  "🦔🎵", "🦩🌺", "🐢💤", "🐑🎤", "🦀💎",
+  "🐬🌊", "🦒🎈", "🐇✨", "🦓🎀", "🐖🥳",
+  "🦦🎁", "🐝🍯", "🦘🏀", "🐆⚡", "🦉📚",
+  "🦜🧩", "🐋🎷", "🦞🍋", "🐿️🍂", "🦥🎧",
+  "🦔🖌️", "🦦🛁", "🐓🥁", "🦇🌙", "🦉☕",
+  "🐠🌈", "🐌🍄", "🐿️🥜", "🦀🏖️", "🐒🙃",
+  "🦑🛸", "🐸🎈", "🐧🕺", "🐢🎩", "🦖🔥",
+  "🦉🎤", "🐝🎵", "🦦🏄‍♂️", "🐊🎯", "🦓🍦",
+  "🐍🎩", "🦞🎁"
+];
+
+const titleEl = document.getElementById("authTitle");
+
+function updateTitleRandomly() {
+  const randomIndex = Math.floor(Math.random() * quirkyAnimals.length);
+  titleEl.textContent = `Welcome ${quirkyAnimals[randomIndex]}`;
+}
+
+// Update every 3 seconds
+setInterval(updateTitleRandomly, 3000);
+
 </script>
 </body>
 </html>
