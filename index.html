@@ -651,7 +651,7 @@ function renderBills() {
 
   let inPeriod = [], outPeriod = [];
 
-  bills.forEach(b => {
+  bills.forEach((b, index) => {
     const [y1, m1, d1] = b.date.split("-");
     let current = new Date(y1, m1 - 1, d1);
     const step = { weekly: 7, biweekly: 14, monthly: 1 }[b.frequency];
@@ -666,15 +666,20 @@ function renderBills() {
       }
     }
 
-    if (occursInPeriod) inPeriod.push(b);
-    else outPeriod.push(b);
+    const billData = { bill: b, originalIndex: index }; // store original index
+    if (occursInPeriod) inPeriod.push(billData);
+    else outPeriod.push(billData);
   });
 
-  inPeriod.sort((a, b) => getNextBillDate(a, start) - getNextBillDate(b, start));
+  // Sort only in-period bills
+  inPeriod.sort((a, b) => getNextBillDate(a.bill, start) - getNextBillDate(b.bill, start));
   const sortedBills = [...inPeriod, ...outPeriod];
 
   // Render all bills
-  sortedBills.forEach((b, i) => {
+  sortedBills.forEach((bData, i) => {
+    const b = bData.bill;
+    const originalIndex = bData.originalIndex;
+
     const billEl = document.createElement("div");
     billEl.className = "bill-wrapper";
 
@@ -694,7 +699,9 @@ function renderBills() {
       }
     }
 
-    const dateChips = occurrences.map(dt => `<span class="chip">${dt.toLocaleDateString("en-US",{month:"short", day:"numeric"})}</span>`).join("•");
+    const dateChips = occurrences
+      .map(dt => `<span class="chip">${dt.toLocaleDateString("en-US",{month:"short", day:"numeric"})}</span>`)
+      .join("•");
 
     inner.innerHTML = `
       <div class="bill-main" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
@@ -710,12 +717,12 @@ function renderBills() {
         </div>
         <div class="bill-actions" style="display:flex; gap:0.5rem; align-items:center;">
           <div class="icon-row">
-            <button class="icon-btn" onclick="editBill(${i})">
+            <button class="icon-btn" onclick="editBill(${originalIndex})">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                 <path d="M3 21v-3l12-12 3 3-12 12H3z"/>
               </svg>
             </button>
-            <button class="icon-btn" onclick="deleteBill(${i})">
+            <button class="icon-btn" onclick="deleteBill(${originalIndex})">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                 <path d="M18.364 5.636a1 1 0 0 0-1.414 0L12 10.586 7.05 5.636a1 1 0 0 0-1.414 1.414L10.586 12l-4.95 4.95a1 1 0 1 0 1.414 1.414L12 13.414l4.95 4.95a1 1 0 0 0 1.414-1.414L13.414 12l4.95-4.95a1 1 0 0 0 0-1.414z"/>
               </svg>
@@ -729,15 +736,13 @@ function renderBills() {
     billEl.appendChild(inner);
     list.appendChild(billEl);
 
-    // Insert divider between in-period bills
+    // Divider logic
     if (i < inPeriod.length - 1) {
       const divider = document.createElement("div");
       divider.className = "bill-divider";
-      divider.innerHTML = `<div></div>`; // subtle visual line
+      divider.innerHTML = `<div></div>`;
       list.appendChild(divider);
     }
-
-    // Insert divider before the first out-of-period bill
     if (i === inPeriod.length - 1 && outPeriod.length > 0) {
       const outDivider = document.createElement("div");
       outDivider.className = "bill-divider";
@@ -745,6 +750,38 @@ function renderBills() {
       list.appendChild(outDivider);
     }
   });
+}
+
+// No changes needed for these functions
+function getNextBillDate(bill, ref){
+  const [y,m,d] = bill.date.split("-");
+  let current = new Date(y,m-1,d);
+  const step = {weekly:7,biweekly:14,monthly:1}[bill.frequency];
+  if(bill.frequency==="monthly"){ 
+    return current>=ref ? current : new Date(current.getFullYear(), current.getMonth()+1, current.getDate()); 
+  } else { 
+    while(current<ref) current.setDate(current.getDate()+step); 
+    return current; 
+  }
+}
+
+function updateTotals(start,end){
+  let totalBills=0;
+  bills.forEach(b=>{
+    const [y2,m2,d2]=b.date.split("-");
+    let c=new Date(y2,m2-1,d2); 
+    const step={weekly:7,biweekly:14,monthly:1}[b.frequency]; 
+    let count=0;
+    if(b.frequency==="monthly"){ if(c>=start && c<=end) count=1; } 
+    else { while(c<=end){ if(c>=start) count++; c.setDate(c.getDate()+step); } }
+    totalBills += count*b.amount; 
+  });
+
+  const spending = income.amount-totalBills;
+  document.getElementById("spendingLeft").textContent=`$${spending.toFixed(2)}`;
+  document.getElementById("spendingLeft").className="hero-amount"+(spending<0?" negative":"");
+  document.getElementById("incomeValue").textContent=`$${income.amount.toFixed(2)}`;
+  document.getElementById("billsValue").textContent=`$${totalBills.toFixed(2)}`;
 }
 
 // Helper: get next occurrence of a bill relative to a reference date
