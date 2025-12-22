@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Billio - Budget Buddy</title>
 <style>
 * { box-sizing:border-box; font-family: system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
@@ -34,13 +33,20 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 .bill { padding:0.75rem 0; border-bottom:1px solid #eee; background:white; transition: transform 0.3s ease; display:flex; flex-direction:column; }
 .bill:last-child { border-bottom:none; }
 .bill-main { display:flex; justify-content:space-between; align-items:center; width:100%; }
-.bill-actions { display:flex; gap:0.5rem; opacity:0; transition: opacity 0.2s; }
+.bill-actions {
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  top: 0;
+}
 .bill:hover .bill-actions { opacity:1; }
-.icon-btn { background:none; border:none; cursor:pointer; padding:0; display:flex; position: relative; top:-2px; align-items:center; justify-content:center; left:4px; }
+.icon-btn { background:none; border:none; cursor:pointer; padding:0; display:flex; position: relative; top:-2px; left:4px; align-items:center; justify-content:center; }
 .icon-btn svg { width:20px; height:20px; fill:#111; transition: fill 0.2s; }
 .icon-btn:hover svg { fill:#555; }
 .icon-row { display: flex; align-items: center; gap: 8px; }
-.chip { padding:2px 6px; border-radius:12px; font-size:0.65rem; margin-right:px; }
+.chip { padding:2px 6px; border-radius:12px; font-size:0.65rem;}
 .frequencychip { background:#e6e7eb; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin-right:3px; }
 .bill-divider {
   height: 1px;
@@ -169,6 +175,122 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   }
   .mobile-only { display: block; }
 }
+
+/* MOBILE FIXES */
+@media (max-width: 768px) {
+  body {
+    padding: 1rem 0.5rem 6rem; /* reduce padding on mobile */
+  }
+
+  .container {
+    width: 100%;
+    margin: 0.5rem auto;
+    padding: 0 0.5rem;
+  }
+
+  /* Make bill actions always visible and easier to tap */
+  .bill-actions {
+    opacity: 1 !important;
+    pointer-events: auto;
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  /* Ensure bill amounts stay aligned with names */
+  .bill-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bill-main > div:last-child {
+    margin-top: 0.5rem;
+    margin-left: 0;
+  }
+
+  /* Make edit/delete buttons easier for thumb access */
+  .icon-row {
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+
+  /* Modal input scaling */
+  .modal input,
+  .modal select,
+  .modal textarea,
+  .modal button {
+    font-size: 16px;
+  }
+  
+  /* Date picker fixes */
+  .date-field input[type="date"] {
+    min-height: 40px;
+    font-size: 16px;
+    padding: 0.4rem;
+  }
+
+  /* Mobile-only labels */
+  .mobile-only {
+    display: block !important;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #666;
+  }
+
+  /* Controls spacing */
+  .controls button {
+    font-size: 0.85rem;
+    padding: 0.7rem 0.5rem;
+  }
+
+  /* Hero section scaling */
+  .hero-amount {
+    font-size: 2.2rem;
+  }
+
+  .hero-label,
+  .hero-sub {
+    font-size: 0.75rem;
+  }
+
+  /* Context cards */
+  .context-card {
+    padding: 0.8rem;
+  }
+
+  .context-value {
+    font-size: 1.1rem;
+  }
+}
+
+  /* Billio app name above welcome text */
+#loginModal .modal .app-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'Helvetica Neue', sans-serif;
+}
+
+#loginModal .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* space between Billio and Welcome */
+}
+  
+#loginModal #authTitle {
+  font-weight: 600;
+}
+  
+.welcome-text {
+  opacity: 0.6; /* lower opacity for the text */
+  font-weight: 400; /* optional, to reduce weight */
+}
+
+.emoji {
+  opacity: 1; /* keep emojis fully opaque */
+}
+
 </style>
 </head>
 <body>
@@ -246,9 +368,12 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 <!-- LOGIN MODAL: TOGGLE/SWITCH FORM -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal">
-    <div class="modal-header">
-      <h3 id="authTitle"> Welcome 👋</h3>
+    <div class="modal-header app-header">
+      <div class="app-name">Billio</div>
     </div>
+        <h3 id="authTitle">
+          <span class="welcome-text">Welcome</span> <span class="emoji">👋</span>
+        </h3>
     <input type="email" id="authEmail" placeholder="Email" />
     <input type="password" id="authPassword" placeholder="Password" />
     <button id="authSubmitBtn" onclick="handleAuth()">Log In</button>
@@ -295,12 +420,15 @@ function toggleAuthMode(e){
   const toggleLink = document.getElementById("authToggleLink");
 
   if(authMode === "login"){
-    title.textContent = "Welcome Back";
+    // LOGIN: Welcome Back with emoji
+    const currentEmoji = title.querySelector(".emoji")?.textContent || "👋";
+    title.innerHTML = `<span class="welcome-text">Welcome Back</span> <span class="emoji">${currentEmoji}</span>`;
     submitBtn.textContent = "Log In";
     toggleText.textContent = "Not registered? ";
     toggleLink.textContent = "Register";
   } else {
-    title.textContent = "Create Account";
+    // REGISTER: Create Account without emoji
+    title.innerHTML = `<span class="welcome-text">Create Account</span>`;
     submitBtn.textContent = "Register";
     toggleText.textContent = "Already have an account? ";
     toggleLink.textContent = "Log In";
@@ -575,11 +703,12 @@ const quirkyAnimals = [
   "🐍🎩", "🦞🎁"
 ];
 
-const titleEl = document.getElementById("authTitle");
-
 function updateTitleRandomly() {
+  const emojiEl = document.querySelector("#authTitle .emoji");
+  if (!emojiEl) return; // Skip if emoji span doesn’t exist
+
   const randomIndex = Math.floor(Math.random() * quirkyAnimals.length);
-  titleEl.textContent = `Welcome ${quirkyAnimals[randomIndex]}`;
+  emojiEl.textContent = quirkyAnimals[randomIndex];
 }
 
 // Update every 3 seconds
