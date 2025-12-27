@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Billio</title>
+<title>Billio - Budget Buddy</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta property="og:image" content="https://christianburdick.github.io/Billio/images/cat-preview.png">
 <!-- Favicon: Cat face emoji -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>">
   
@@ -309,6 +308,10 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   opacity: 1; /* keep emojis fully opaque */
 }
 
+#filterBtn {
+  transition: opacity 0.2s ease;
+}
+
 </style>
 </head>
 <body>
@@ -333,10 +336,18 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   </section>
 
   <section class="bills">
-    <div class="bills-header" onclick="toggleBills()">
-      <h2>Bill Details</h2>
-      <span class="toggle" id="toggleText">Show</span>
-    </div>
+    <div class="bills-header" style="display:flex; justify-content:space-between; align-items:center;">
+  <h2 style="margin:0;">Bill Details</h2>
+  <div style="display:flex; align-items:center; gap:1.5rem;">
+    <button class="icon-btn" id="filterBtn" onclick="showModal('filterModal')" aria-label="Filter bills" style="display:none;">
+      <svg viewBox="0 0 24 24">
+        <path d="M3 5h18v2H3V5zm4 6h10v2H7v-2zm3 6h4v2h-4v-2z"/>
+      </svg>
+    </button>
+    <span class="toggle" id="toggleText" onclick="toggleBills()">Show</span>
+  </div>
+</div>
+
     <div class="bill-list" id="billList"></div>
   </section>
 </div>
@@ -380,6 +391,33 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
       <input type="date" id="newBillStart">
     </div>
     <button onclick="addBill()">Save</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="filterModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Filter Bills</h3>
+      <span class="close-btn" onclick="closeModal('filterModal')">&times;</span>
+    </div>
+
+    <label class="input-label">Sort by</label>
+    <select id="sortSelect">
+      <option value="none">Closest → Farthest</option>
+      <option value="amount-desc">Highest → Lowest</option>
+      <option value="amount-asc">Lowest → Highest</option>
+    </select>
+
+    <label class="input-label">Frequency</label>
+    <select id="frequencyFilter">
+      <option value="all">All</option>
+      <option value="weekly">Weekly</option>
+      <option value="biweekly">Biweekly</option>
+      <option value="monthly">Monthly</option>
+    </select>
+
+    <button onclick="applyFilters()">Apply Filters</button>
+    <p style="text-align:center; margin-top:0.5rem; font-size:0.75rem; color:#111; cursor:pointer;" onclick="resetFilters()">Reset</p>
   </div>
 </div>
 
@@ -437,6 +475,11 @@ let income = { amount: 0, frequency: "monthly", nextPayday: null };
 let bills = [];
 let billsVisible = false;
 let editIndex = null;
+
+let billFilters = {
+  sort: "none",
+  frequency: "all"
+};
 
 // ==================== LOGIN/REGISTER TOGGLE ====================
 let authMode = "login"; // "login" or "register"
@@ -575,11 +618,23 @@ function loadUserData(uid){
   });
 }
 
-function toggleBills(){
-  if(!income.nextPayday){ alert("Please input your income first."); return; }
+function toggleBills() {
+  if (!income.nextPayday) {
+    alert("Please input your income first.");
+    return;
+  }
+
   billsVisible = !billsVisible;
-  document.getElementById("billList").style.display = billsVisible ? "block" : "none";
-  document.getElementById("toggleText").textContent = billsVisible ? "Hide" : "Show";
+
+  document.getElementById("billList").style.display =
+    billsVisible ? "block" : "none";
+
+  document.getElementById("toggleText").textContent =
+    billsVisible ? "Hide" : "Show";
+
+  // 🔍 Show / hide filter icon
+  document.getElementById("filterBtn").style.display =
+    billsVisible && bills.length >= 2 ? "flex" : "none";
 }
 
 function showModal(id){
@@ -633,51 +688,45 @@ function addBill() {
 function renderBills() {
   if (!income.nextPayday) return;
 
-  const [y, m, d] = income.nextPayday.split("-");
-  const start = new Date(y, m - 1, d);
-  const end = new Date(start);
-  if (income.frequency === "weekly") end.setDate(start.getDate() + 6);
-  if (income.frequency === "biweekly") end.setDate(start.getDate() + 13);
-  if (income.frequency === "monthly") end.setMonth(start.getMonth() + 1, 0);
+  const [yStart, mStart, dStart] = income.nextPayday.split("-");
+  const periodStart = new Date(yStart, mStart - 1, dStart);
+
+  const periodEnd = new Date(periodStart);
+  if (income.frequency === "weekly") periodEnd.setDate(periodStart.getDate() + 6);
+  if (income.frequency === "biweekly") periodEnd.setDate(periodStart.getDate() + 13);
+  if (income.frequency === "monthly") periodEnd.setMonth(periodStart.getMonth() + 1, 0);
+
+  // Apply frequency filter
+  let filteredBills = bills;
+  if (billFilters.frequency !== "all") {
+    filteredBills = bills.filter(b => b.frequency === billFilters.frequency);
+  }
+
+  // Map bills with next occurrence date
+  let billsWithNextDate = filteredBills.map((b, index) => ({
+    bill: b,
+    originalIndex: index,
+    nextDate: getNextBillDate(b, periodStart)
+  }));
+
+  // Sort by selected option
+  billsWithNextDate.sort((a, b) => {
+    if (billFilters.sort === "amount-desc") return b.bill.amount - a.bill.amount;
+    if (billFilters.sort === "amount-asc") return a.bill.amount - b.bill.amount;
+    if (billFilters.sort === "date-desc") return b.nextDate - a.nextDate; // farthest → closest
+    return a.nextDate - b.nextDate; // closest → farthest
+  });
 
   const list = document.getElementById("billList");
-
-  updateTotals(start, end);
   list.innerHTML = "";
 
-  if (bills.length === 0) {
+  if (billsWithNextDate.length === 0) {
     list.innerHTML = `<div style="text-align:center;color:#888; font-size:0.9rem;">No bills yet</div>`;
+    updateTotals(periodStart, periodEnd);
     return;
   }
 
-  let inPeriod = [], outPeriod = [];
-
-  bills.forEach((b, index) => {
-    const [y1, m1, d1] = b.date.split("-");
-    let current = new Date(y1, m1 - 1, d1);
-    const step = { weekly: 7, biweekly: 14, monthly: 1 }[b.frequency];
-    let occursInPeriod = false;
-
-    if (b.frequency === "monthly") {
-      occursInPeriod = current >= start && current <= end;
-    } else {
-      while (current <= end) {
-        if (current >= start) { occursInPeriod = true; break; }
-        current.setDate(current.getDate() + step);
-      }
-    }
-
-    const billData = { bill: b, originalIndex: index }; // store original index
-    if (occursInPeriod) inPeriod.push(billData);
-    else outPeriod.push(billData);
-  });
-
-  // Sort only in-period bills
-  inPeriod.sort((a, b) => getNextBillDate(a.bill, start) - getNextBillDate(b.bill, start));
-  const sortedBills = [...inPeriod, ...outPeriod];
-
-  // Render all bills
-  sortedBills.forEach((bData, i) => {
+  billsWithNextDate.forEach((bData, i) => {
     const b = bData.bill;
     const originalIndex = bData.originalIndex;
 
@@ -691,11 +740,12 @@ function renderBills() {
     let current = new Date(y1, m1 - 1, d1);
     const step = { weekly: 7, biweekly: 14, monthly: 1 }[b.frequency];
     const occurrences = [];
+
     if (b.frequency === "monthly") {
-      if (current >= start && current <= end) occurrences.push(new Date(current));
+      if (current >= periodStart && current <= periodEnd) occurrences.push(new Date(current));
     } else {
-      while (current <= end) {
-        if (current >= start) occurrences.push(new Date(current));
+      while (current <= periodEnd) {
+        if (current >= periodStart) occurrences.push(new Date(current));
         current.setDate(current.getDate() + step);
       }
     }
@@ -737,20 +787,35 @@ function renderBills() {
     billEl.appendChild(inner);
     list.appendChild(billEl);
 
-    // Divider logic
-    if (i < inPeriod.length - 1) {
+    if (i < billsWithNextDate.length - 1) {
       const divider = document.createElement("div");
       divider.className = "bill-divider";
       divider.innerHTML = `<div></div>`;
       list.appendChild(divider);
     }
-    if (i === inPeriod.length - 1 && outPeriod.length > 0) {
-      const outDivider = document.createElement("div");
-      outDivider.className = "bill-divider";
-      outDivider.innerHTML = `<div style="text-align:center;font-size:0.75rem;color:#888; margin-bottom:4px;"></div>`;
-      list.appendChild(outDivider);
-    }
   });
+
+  updateTotals(periodStart, periodEnd);
+  
+    // Show/hide filter button
+  document.getElementById("filterBtn").style.display =
+    billsVisible && bills.length >= 2 ? "flex" : "none";
+
+}
+
+// Helper: gets next occurrence of a bill after the given date
+function getNextBillDate(bill, startDate) {
+  const [y, m, d] = bill.date.split("-");
+  let current = new Date(y, m - 1, d);
+  const step = { weekly: 7, biweekly: 14, monthly: 1 }[bill.frequency];
+
+  if (bill.frequency === "monthly") {
+    while (current < startDate) current.setMonth(current.getMonth() + 1);
+  } else {
+    while (current < startDate) current.setDate(current.getDate() + step);
+  }
+
+  return current;
 }
 
 // No changes needed for these functions
@@ -848,6 +913,53 @@ function updateTitleRandomly() {
 
 // Update every 3 seconds
 setInterval(updateTitleRandomly, 3000);
+
+// Filter logic
+function applyFilters() {
+  billFilters.sort = document.getElementById("sortSelect").value;
+  billFilters.frequency = document.getElementById("frequencyFilter").value;
+  closeModal("filterModal");
+  recalc();
+}
+
+const filterBtn = document.querySelector(".bills-header .icon-btn");
+
+function updateFilterBtnOpacity() {
+  if (!filterBtn) return;
+  filterBtn.style.opacity =
+    billFilters.sort !== "none" || billFilters.frequency !== "all"
+      ? "1"
+      : "0.6"; // slightly dim if no filters
+}
+
+// Call whenever filters are applied
+function applyFilters() {
+  billFilters.sort = document.getElementById("sortSelect").value;
+  billFilters.frequency = document.getElementById("frequencyFilter").value;
+  closeModal("filterModal");
+  recalc();
+  updateFilterBtnOpacity();
+}
+
+// Reset filters
+function resetFilters() {
+  // Reset filter values
+  document.getElementById("sortSelect").value = "none";
+  document.getElementById("frequencyFilter").value = "all";
+
+  // Reset the billFilters object
+  billFilters.sort = "none";
+  billFilters.frequency = "all";
+
+  // Re-render bills
+  renderBills();
+
+  // Close the filter modal
+  closeModal("filterModal");
+}
+
+// Initial filter button state
+updateFilterBtnOpacity();
 
 </script>
 </body>
