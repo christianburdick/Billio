@@ -49,7 +49,15 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 .bill { padding:0.75rem 0; border-bottom:1px solid #eee; background:white; transition: transform 0.3s ease; display:flex; flex-direction:column; }
 .bill:last-child { border-bottom:none; }
 .bill-main { display:flex; justify-content:space-between; align-items:center; width:100%; }
-.bill-row { display:flex; justify-content:space-between; align-items:flex-start; width:100%; gap:0.5rem; user-select:none; -webkit-user-select:none; touch-action: pan-y; }
+.bill-row { display:flex; justify-content:space-between; align-items:flex-start; width:100%; gap:0.5rem; user-select:none; -webkit-user-select:none; touch-action: pan-y; cursor:default; }
+.bill-list.dragging .bill-row,
+.bill-wrapper.dragging .bill-row {
+  cursor: grabbing;
+}
+body.drag-cursor,
+body.drag-cursor * {
+  cursor: grabbing !important;
+}
 .bill-content { display:flex; flex:1; flex-direction:column; gap:0.45rem; min-width:0; }
 .bill-details { display:none; flex-wrap:wrap; align-items:center; gap:0.4rem; row-gap:0.3rem; margin-top:0rem; }
 .occurrence-chips,
@@ -185,7 +193,9 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:0.6rem;
-  border-top:1px solid #e5e5ea;
+  border-top:none;
+  border-radius:18px 18px 0 0;
+  box-shadow:none;
   z-index:900;
 }
 .controls button {
@@ -239,6 +249,15 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   border: 1px solid #ddd;
   box-sizing: border-box;
 }
+/* Hide number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
 
 .modal-header {
   display: flex;
@@ -263,6 +282,68 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   cursor: pointer;
 }
 
+/* INCOME SHEET */
+#incomeModal {
+  align-items: flex-end;
+  padding: 0;
+  background: rgba(0,0,0,0.25);
+}
+#incomeModal .sheet {
+  background: #fff;
+  width: min(420px, 100%);
+  border-radius: 18px 18px 0 0;
+  padding: 1.5rem;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+  margin-bottom: 0;
+}
+#incomeModal .sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+#incomeModal .sheet-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+#incomeModal .sheet-label {
+  font-size: 0.85rem;
+  color: #222;
+}
+#incomeModal .sheet-divider {
+  height: 1px;
+  background: #e5e5ea;
+  margin: 0.75rem 0;
+}
+#incomeModal .sheet input,
+#incomeModal .sheet select {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+}
+#incomeModal .inline-error {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #c62828;
+  min-height: 1em;
+}
+#incomeModal .sheet button {
+  width: 100%;
+  background: #111;
+  color: #fff;
+  border-radius: 12px;
+  padding: 0.7rem;
+  margin-top: 1rem;
+  border: none;
+}
+
 .date-field {
   width: 100%;
   overflow: hidden;
@@ -275,6 +356,23 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   min-height: 35px;
   display: block;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* New bill date pill */
+#billsModal .pill-date {
+  width: auto;
+  min-height: unset;
+  padding: 2px 6px;
+  border: 1px solid #d7d7dd !important;
+  box-shadow: inset 0 0 0 1px #d7d7dd;
+  border-radius: 12px;
+  background: transparent;
+  color: #3c3c3c;
+  font-size: 0.65rem;
+  font-weight: 400;
+  cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
 }
@@ -310,6 +408,15 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
     pointer-events: auto;
   }
   .mobile-only { display: block; }
+}
+
+.bill-wrapper.no-due,
+.bill-wrapper.no-due .bill,
+.bill-wrapper.no-due .bill-row,
+.bill-wrapper.no-due .bill-content,
+.bill-wrapper.no-due .bill-right {
+  opacity: 0.55;
+  filter: grayscale(0.2);
 }
 
 /* MOBILE FIXES */
@@ -509,18 +616,36 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 
 <!-- MODALS -->
 <div class="modal-overlay" id="incomeModal">
-  <div class="modal">
-    <div class="modal-header"><h3>Edit Income</h3><span class="close-btn" onclick="closeModal('incomeModal')">&times;</span></div>
-    <input type="number" id="incomeAmount" placeholder="Income Amount">
-    <select id="incomeFrequency">
-      <option value="weekly">Weekly</option>
-      <option value="biweekly">Biweekly</option>
-      <option value="monthly">Monthly</option>
-    </select>
-    <label class="input-label mobile-only">Payday</label>
-    <div class="date-field">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h3>Pay Schedule</h3>
+      <span class="close-btn" onclick="closeModal('incomeModal')">&times;</span>
+    </div>
+
+    <div class="sheet-row">
+      <span class="sheet-label">Amount</span>
+      <input type="text" id="incomeAmount" inputmode="decimal" placeholder="Income Amount">
+    </div>
+    <div class="sheet-divider"></div>
+
+    <div class="sheet-row">
+      <span class="sheet-label">Frequency</span>
+      <select id="incomeFrequency">
+        <option value="" disabled selected>Frequency</option>
+        <option value="weekly">Weekly</option>
+        <option value="biweekly">Biweekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+    <div class="sheet-divider"></div>
+
+    <div class="sheet-row">
+      <span class="sheet-label">Next Payday</span>
       <input type="date" id="nextPayday">
     </div>
+
+    <div id="incomeError" class="inline-error" aria-live="polite"></div>
+
     <button onclick="saveIncome()">Save</button>
   </div>
 </div>
@@ -529,15 +654,16 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   <div class="modal">
     <div class="modal-header"><h3>Manage Bills</h3><span class="close-btn" onclick="closeModal('billsModal')">&times;</span></div>
     <input type="text" id="newBillName" placeholder="Bill Name">
-    <input type="number" id="newBillAmount" placeholder="Amount">
+    <input type="text" id="newBillAmount" inputmode="decimal" placeholder="Amount">
     <select id="newBillFrequency">
+      <option value="" disabled selected hidden>Frequency</option>
       <option value="weekly">Weekly</option>
       <option value="biweekly">Biweekly</option>
       <option value="monthly">Monthly</option>
     </select>
     <div class="date-field">
       <label class="input-label mobile-only">Due Date</label>
-      <input type="date" id="newBillStart">
+      <input type="date" id="newBillStart" class="pill-date">
     </div>
     <button onclick="addBill()">Save</button>
   </div>
@@ -620,7 +746,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let income = { amount: 0, frequency: "monthly", nextPayday: null };
+let income = { amount: 0, frequency: "", nextPayday: null };
 let bills = [];
 let billsVisible = false;
 let editBillId = null;
@@ -853,17 +979,38 @@ function showModal(id){
     document.getElementById("newBillName").value="";
     document.getElementById("newBillAmount").value="";
     document.getElementById("newBillStart").value="";
+    document.getElementById("newBillFrequency").value="";
+  }
+  if (id === "incomeModal") {
+    document.getElementById("incomeAmount").value = income.amount > 0 ? income.amount : "";
+    document.getElementById("incomeFrequency").value = income.frequency || "";
+    document.getElementById("nextPayday").value = income.nextPayday || "";
+    const err = document.getElementById("incomeError");
+    if (err) err.textContent = "";
   }
 }
 function closeModal(id){ if(id!=="loginModal") {document.getElementById(id).style.display="none"; editBillId=null;} }
 
+function sanitizeAmountValue(raw){
+  const cleaned = String(raw || "").replace(/[^0-9.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  if (firstDot === -1) return cleaned;
+  return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+}
+
 function saveIncome() {
-  const amount = parseFloat(document.getElementById("incomeAmount").value);
+  const amountInput = document.getElementById("incomeAmount");
+  const cleanedAmount = sanitizeAmountValue(amountInput.value);
+  amountInput.value = cleanedAmount;
+  const amount = parseFloat(cleanedAmount);
   const frequency = document.getElementById("incomeFrequency").value;
   const nextPayday = document.getElementById("nextPayday").value;
+  const err = document.getElementById("incomeError");
 
-  if (isNaN(amount) || amount <= 0) { alert("Please enter a valid income amount."); return; }
-  if (!nextPayday) { alert("Please select your next payday."); return; }
+  if (isNaN(amount) || amount <= 0) { if (err) err.textContent = "Please enter a valid income amount."; return; }
+  if (!frequency) { if (err) err.textContent = "Please select a frequency."; return; }
+  if (!nextPayday) { if (err) err.textContent = "Please select your next payday."; return; }
+  if (err) err.textContent = "";
 
   income = { amount, frequency, nextPayday };
   saveUserData();
@@ -873,7 +1020,10 @@ function saveIncome() {
 
 function addBill() {
   const name = document.getElementById("newBillName").value.trim();
-  const amount = parseFloat(document.getElementById("newBillAmount").value);
+  const amountInput = document.getElementById("newBillAmount");
+  const cleanedAmount = sanitizeAmountValue(amountInput.value);
+  amountInput.value = cleanedAmount;
+  const amount = parseFloat(cleanedAmount);
   const frequency = document.getElementById("newBillFrequency").value;
   const startDate = document.getElementById("newBillStart").value;
 
@@ -968,12 +1118,13 @@ function openInlineEditor(bill, type, anchorEl){
     });
   } else if (type === "amount") {
     input = document.createElement("input");
-    input.type = "number";
-    input.min = "0";
-    input.step = "0.01";
+    input.type = "text";
+    input.inputMode = "decimal";
     input.value = bill.amount == null ? "" : Number(bill.amount);
     input.addEventListener("change", async () => {
-      const value = input.value === "" ? null : Number(input.value);
+      const cleaned = sanitizeAmountValue(input.value);
+      input.value = cleaned;
+      const value = cleaned === "" ? null : Number(cleaned);
       await updateBillFields(bill.id, { amount: isNaN(value) ? null : value });
       closeInlineEditor();
     });
@@ -983,8 +1134,9 @@ function openInlineEditor(bill, type, anchorEl){
     placeholder.value = "";
     placeholder.textContent = "Frequency";
     placeholder.disabled = true;
+    placeholder.selected = !bill.frequency;
     input.appendChild(placeholder);
-    const currentFreq = bill.frequency || "weekly";
+    const currentFreq = bill.frequency || "";
     ["weekly", "biweekly", "monthly"].forEach(freq => {
       const opt = document.createElement("option");
       opt.value = freq;
@@ -1064,9 +1216,10 @@ function setupDragReorder(list){
     if (!row) return;
 
     row.addEventListener("pointerdown", (e) => {
-      if (e.target.closest("button, input, select, textarea, a")) return;
+      if (e.target.closest("input, select, textarea, a")) return;
       if (wrapper.dataset.pending === "true") return;
       if (e.pointerType === "mouse") e.preventDefault();
+      // Switch to grabbing only after reorder activates
       dragState.pointerDown = true;
       dragState.pointerId = e.pointerId;
       dragState.startX = e.clientX;
@@ -1098,23 +1251,22 @@ function setupDragReorder(list){
 function cancelLongPress(){
   clearTimeout(dragState.longPressTimer);
   dragState.longPressTimer = null;
+  if (!dragState.active) document.body.classList.remove("drag-cursor");
 }
 
 function startDrag(wrapper, list, e){
   if (!dragState.pointerDown) return;
   dragState.active = true;
+  document.body.classList.add("drag-cursor");
   dragState.dragEl = wrapper;
   dragState.justDragged = true;
   list.classList.add("reorder-mode");
   list.classList.add("dragging");
   wrapper.classList.add("dragging");
-  if (expandedBillIds.size > 0) {
-    expandedBillIds.clear();
-    list.querySelectorAll(".bill-details.show").forEach(el => el.classList.remove("show"));
-    list.querySelectorAll(".bill-actions.show").forEach(el => el.classList.remove("show"));
-  }
+  // Keep expanded rows open during reorder
+  const group = wrapper.dataset.group || "due";
   const items = Array.from(list.querySelectorAll(".bill-wrapper"))
-    .filter(el => el.dataset.pending !== "true");
+    .filter(el => el.dataset.pending !== "true" && (el.dataset.group || "due") === group);
   dragState.items = items;
   dragState.items.forEach(item => item.classList.add("reorder-mode"));
   dragState.startIndex = items.indexOf(wrapper);
@@ -1139,6 +1291,12 @@ function handleDragMove(list, e){
   const listRect = list.getBoundingClientRect();
   let minDelta = listRect.top - rect.top;
   let maxDelta = listRect.bottom - rect.bottom;
+  if (dragState.positions.length > 0) {
+    const groupTop = dragState.positions[0].top;
+    const groupBottom = dragState.positions[dragState.positions.length - 1].bottom;
+    minDelta = Math.max(minDelta, groupTop - rect.top);
+    maxDelta = Math.min(maxDelta, groupBottom - rect.bottom);
+  }
   const deltaY = Math.max(minDelta, Math.min(rawDeltaY, maxDelta));
   dragState.dragEl.style.transform = `translateY(${deltaY}px)`;
   dragState.dragEl.style.zIndex = "3";
@@ -1157,6 +1315,7 @@ function handleDragMove(list, e){
 function endDrag(list){
   if (dragState.longPressTimer) cancelLongPress();
   dragState.pointerDown = false;
+  document.body.classList.remove("drag-cursor");
   if (!dragState.active) return;
   dragState.active = false;
   if (dragState.dragEl) dragState.dragEl.classList.remove("dragging");
@@ -1299,7 +1458,8 @@ function renderBills() {
   // Map bills with next occurrence date
   let billsWithNextDate = filteredBills.map(b => ({
     bill: b,
-    nextDate: b.date ? getNextBillDate(b, periodStart) : null
+    nextDate: b.date ? getNextBillDate(b, periodStart) : null,
+    occurrences: getBillOccurrencesInPeriod(b, periodStart, periodEnd)
   }));
 
   // Sort by selected option (respect manual order when no sort filter is applied)
@@ -1322,10 +1482,10 @@ function renderBills() {
   const list = document.getElementById("billList");
   list.innerHTML = "";
 
-  const pendingForDisplay = pendingBills.map(b => ({ bill: b, nextDate: null }));
-  const billsForDisplay = pendingForDisplay.length
-    ? [...pendingForDisplay, ...billsWithNextDate]
-    : billsWithNextDate;
+  const pendingForDisplay = pendingBills.map(b => ({ bill: b, nextDate: null, occurrences: [] }));
+  const dueBills = billsWithNextDate.filter(b => b.occurrences.length > 0);
+  const noDueBills = billsWithNextDate.filter(b => b.occurrences.length === 0);
+  const billsForDisplay = [...pendingForDisplay, ...dueBills, ...noDueBills];
 
   if (billsForDisplay.length === 0) {
     list.innerHTML = `<div style="text-align:center;color:#888; font-size:0.9rem;">No bills yet</div>`;
@@ -1347,13 +1507,17 @@ function renderBills() {
     const dueLabel = formatBillDate(b.date);
     const freqLabel = (b.placeholder && !b.frequency) ? "Frequency" : (b.frequency ? capitalize(b.frequency) : "Frequency");
     const isPending = b.placeholder === true;
-    const occurrences = getBillOccurrencesInPeriod(b, periodStart, periodEnd);
+    const occurrences = bData.occurrences || [];
     const occurrenceChips = occurrences
       .map(dt => {
         const iso = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
         return `<button class="chip chip-occurrence" data-occurrence="${iso}" data-bill="${b.id}" aria-label="Set anchor date">${dt.toLocaleDateString("en-US",{month:"short", day:"numeric"})}</button>`;
       })
       .join("");
+    const hasDueInPeriod = occurrenceChips.length > 0;
+    const noDueDate = !isPending && (!b.date || !hasDueInPeriod);
+    if (noDueDate) billEl.classList.add("no-due");
+    if (!isPending) billEl.dataset.group = noDueDate ? "nodue" : "due";
     const hasAmount = !(b.amount == null || isNaN(b.amount));
     const amountInline = hasAmount ? `$${Number(b.amount).toFixed(2)}` : "—";
     const amountLabel = hasAmount ? `$${Number(b.amount).toFixed(2)}` : "—";
@@ -1368,7 +1532,7 @@ function renderBills() {
               ? `<button class="chip chip-btn" data-edit="date" data-bill="${b.id}" aria-label="Edit anchor date">${dueLabel}</button>`
               : (occurrenceChips
                   ? `<div class="occurrence-chips">${occurrenceChips}</div>`
-                  : `<div class="occurrence-empty">No due dates this period</div>`)}
+                  : ``)}
           </div>
         </div>
 
@@ -1525,7 +1689,7 @@ function editBill(billId){
   if (!b) return;
   document.getElementById("newBillName").value=b.name || "";
   document.getElementById("newBillAmount").value=b.amount ?? "";
-  document.getElementById("newBillFrequency").value=b.frequency || "monthly";
+  document.getElementById("newBillFrequency").value=b.frequency || "";
   document.getElementById("newBillStart").value=b.date || "";
 }
 function deleteBill(billId){
