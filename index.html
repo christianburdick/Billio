@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Billio - Budget Buddy</title>
+<title>Billio</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Favicon: Cat face emoji -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>">
@@ -26,17 +26,86 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 .context-label { font-size:0.8rem; color:#666; }
 
 /* BILLS */
-.bills { background:white; border-radius:20px; padding:1.5rem; margin-bottom:1rem; }
+.bills { background:white; border-radius:20px; padding:1.5rem; margin-bottom:1rem; overflow: hidden; }
 .bills-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
 .bills-header h2 { margin:0; font-size:1.1rem; }
-.toggle { font-size:0.8rem; color:#666; }
+.toggle-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.toggle-icon { width: 20px; height: 20px; stroke: #666; fill: none; transition: transform 0.2s ease; }
+.toggle-btn.is-open .toggle-icon { transform: rotate(180deg); }
 .bill-list { margin-top:1rem; display:none; }
 
 /* BILL ITEM */
-.bill-wrapper { position: relative; overflow: hidden; }
+.bill-wrapper { position: relative; overflow: hidden; z-index: 1; }
+.bill-list.dragging .bill-wrapper { transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+.bill-list.reorder-mode .bill-wrapper { transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
 .bill { padding:0.75rem 0; border-bottom:1px solid #eee; background:white; transition: transform 0.3s ease; display:flex; flex-direction:column; }
 .bill:last-child { border-bottom:none; }
 .bill-main { display:flex; justify-content:space-between; align-items:center; width:100%; }
+.bill-row { display:flex; justify-content:space-between; align-items:flex-start; width:100%; gap:0.5rem; user-select:none; -webkit-user-select:none; touch-action: pan-y; }
+.bill-content { display:flex; flex:1; flex-direction:column; gap:0.45rem; min-width:0; }
+.bill-details { display:none; flex-wrap:wrap; align-items:center; gap:0.4rem; row-gap:0.3rem; margin-top:0rem; }
+.occurrence-chips,
+.occurrence-empty {
+  margin-top:0.4rem;
+}
+.bill-details.show { display:flex; }
+.bill-right { display:flex; align-items:flex-end; gap:0.4rem; white-space:nowrap; flex-shrink:0; margin-left:auto; margin-right:0.25rem; }
+.bill-amount { font-weight:400; font-size:1rem; color:#111; }
+.bill-amount-btn { background:none; border:none; padding:0; font-weight:400; cursor:pointer; font-size:1rem; color:#111; }
+.bill-name-btn {
+  background:none;
+  border:none;
+  padding:0;
+  text-align:left;
+  font-weight:500;
+  font-size:1rem;
+  cursor:pointer;
+  color:#111;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.bill-name-input {
+  width:auto;
+  min-width: 6ch;
+  border:none;
+  background:transparent;
+  padding:0;
+  font-size:1rem;
+  font-weight:500;
+  color:#111;
+  display:inline-block;
+  align-self:flex-start;
+  max-width:100%;
+}
+.bill-name-input:focus {
+  outline:none;
+}
+.inline-editor {
+  position: fixed;
+  z-index: 1200;
+  display: none;
+  padding: 0.6rem;
+  background: white;
+  border: 1px solid #e5e5ea;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+}
+.inline-editor input,
+.inline-editor select {
+  width: 180px;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
 .bill-actions {
   opacity: 0;
   display: flex;
@@ -45,12 +114,45 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   position: relative;
   top: 0;
 }
-.bill:hover .bill-actions { opacity:1; }
-.icon-btn { background:none; border:none; cursor:pointer; padding:0; display:flex; position: relative; top:-2px; left:4px; align-items:center; justify-content:center; }
+.bill-actions.show { opacity: 1; }
+.icon-btn { background:none; border:none; cursor:pointer; padding:0; display:flex; position: relative; top:1px; left:4px; align-items:center; justify-content:center; }
 .icon-btn svg { width:20px; height:20px; fill:#111; transition: fill 0.2s; }
-.icon-btn:hover svg { fill:#555; }
 .icon-row { display: flex; align-items: center; gap: 8px; }
-.chip { padding:2px 6px; border-radius:12px; font-size:0.65rem;}
+.chip {
+  padding:2px 6px;
+  border-radius:12px;
+  font-size:0.65rem;
+  font-weight:400;
+  color:#3c3c3c;
+  background:transparent;
+  border:none;
+}
+.chip-rect,
+.chip-btn.chip-rect {
+  border-radius:4px;
+  background:#e6e7eb;
+  font-size:0.8rem;
+  color:#222;
+  border:none;
+  margin-right:0.35rem;
+}
+.chip-btn {
+  background: transparent;
+  border: none;
+  color:#3c3c3c;
+  cursor: pointer;
+}
+.occurrence-chips { display:flex; flex-wrap:wrap; gap:0.15rem; width:100%; margin-top:0; }
+.occurrence-chips .chip { font-size:0.65rem; padding:2px 6px; }
+.chip-occurrence {
+  background:transparent;
+  border:1px solid #d7d7dd;
+  color:#3c3c3c;
+  cursor: pointer;
+  border-radius:12px;
+}
+.chip-occurrence:hover { color:#2f2f35; }
+.occurrence-empty { font-size:0.7rem; color:#999; margin-top:0; width:100%; }
 .frequencychip { background:#e6e7eb; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin-right:3px; }
 .bill-divider {
   height: 1px;
@@ -69,11 +171,41 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 }
   
 /* CONTROLS */
-.controls { position:fixed; bottom:0; left:0; right:0; background:white; padding:0.75rem; display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; }
-.controls button { padding:0.6rem; border-radius:10px; border:none; font-size:0.75rem; cursor:pointer; }
+.controls {
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  margin:0 auto;
+  width:min(420px, 100%);
+  background:rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  padding:0.9rem;
+  padding-bottom:calc(0.9rem + env(safe-area-inset-bottom));
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:0.6rem;
+  border-top:1px solid #e5e5ea;
+  z-index:900;
+}
+.controls button {
+  padding:0.6rem;
+  border-radius:10px;
+  border:none;
+  font-size:0.75rem;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.4rem;
+  background:#f2f2f7;
+  color:#111;
+}
+.controls button svg { width:20px; height:20px; }
+.controls .income-icon { width:26px; height:26px; }
 .primary { background:#111; color:white; }
-.secondary { background:#e6e7eb; }
-.logout-btn { background: none; border: none; color: #888; font-size: 0.75rem; }
+.secondary { background:#f2f2f7; }
+.logout-btn { background: none !important; border: none; color:#111; }
 
 /* MODALS */
 .modal-overlay {
@@ -174,7 +306,7 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 .mobile-only { display: none; }
 @media (max-width: 768px) {
   .bill-actions {
-    opacity: 1 !important;
+    opacity: 0;
     pointer-events: auto;
   }
   .mobile-only { display: block; }
@@ -192,13 +324,14 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
     padding: 0 0.5rem;
   }
 
-  /* Make bill actions always visible and easier to tap */
+  /* Bill actions only when expanded */
   .bill-actions {
-    opacity: 1 !important;
+    opacity: 0 !important;
     pointer-events: auto;
     flex-direction: row;
     gap: 0.5rem;
   }
+  .bill-actions.show { opacity: 1 !important; }
 
   /* Ensure bill amounts and buttons stay in the same row as the bill name */
   .bill-main {
@@ -336,15 +469,14 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
   </section>
 
   <section class="bills">
-    <div class="bills-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="bills-header" id="billsHeader" style="display:flex; justify-content:space-between; align-items:center;">
   <h2 style="margin:0;">Bill Details</h2>
   <div style="display:flex; align-items:center; gap:1.5rem;">
-    <button class="icon-btn" id="filterBtn" onclick="showModal('filterModal')" aria-label="Filter bills" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="#666">
-        <path d="M3 5h18v2H3V5zm4 6h10v2H7v-2zm3 6h4v2h-4v-2z"/>
+    <button class="toggle-btn" id="toggleBtn" onclick="toggleBills()" aria-label="Toggle bill details">
+      <svg class="toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 9l6 6 6-6"></path>
       </svg>
     </button>
-    <span class="toggle" id="toggleText" onclick="toggleBills()">Show</span>
   </div>
 </div>
 
@@ -353,10 +485,27 @@ body { margin:0; padding:2rem 1rem 6rem; background:#f2f3f5; color:#111; }
 </div>
 
 <section class="controls">
-  <button class="secondary" onclick="showModal('incomeModal')">Income</button>
-  <button class="secondary" id="addBillBtn" onclick="showModal('billsModal')">Add Bill</button>
-  <button class="logout-btn" onclick="logout()">Log Out</button>
+  <button class="secondary" onclick="showModal('incomeModal')" aria-label="Income">
+    <svg class="income-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3.5" y="6.5" width="17" height="11" rx="2"/>
+      <circle cx="12" cy="12" r="2.2"/>
+    </svg>
+  </button>
+  <button class="primary" id="addBillBtn" onclick="quickAddBill()" aria-label="Add bill" style="background:#111;color:#fff;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+  </button>
+  <button class="logout-btn" onclick="logout()" aria-label="Log out">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4"/>
+      <path d="M16 17l5-5-5-5"/>
+      <path d="M21 12H9"/>
+    </svg>
+  </button>
 </section>
+
+<div class="inline-editor" id="inlineEditor" aria-hidden="true"></div>
 
 <!-- MODALS -->
 <div class="modal-overlay" id="incomeModal">
@@ -474,12 +623,40 @@ const db = firebase.firestore();
 let income = { amount: 0, frequency: "monthly", nextPayday: null };
 let bills = [];
 let billsVisible = false;
-let editIndex = null;
+let editBillId = null;
+let expandedBillIds = new Set();
+let pendingBills = [];
+let inlineEditorReady = false;
+let focusBillId = null;
+let manualOrder = false;
+let dragState = {
+  active: false,
+  dragEl: null,
+  pointerId: null,
+  longPressTimer: null,
+  startX: 0,
+  startY: 0,
+  lastDeltaY: 0,
+  dragDirection: null,
+  lastDir: "down",
+  items: [],
+  positions: [],
+  startIndex: -1,
+  currentIndex: -1,
+  gap: 0,
+  justDragged: false,
+  listenersReady: false,
+  pointerDown: false
+};
 
 let billFilters = {
   sort: "none",
   frequency: "all"
 };
+
+function generateId(){
+  return `bill_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 // ==================== LOGIN/REGISTER TOGGLE ====================
 let authMode = "login"; // "login" or "register"
@@ -614,7 +791,23 @@ function saveUserData(){ db.collection("users").doc(auth.currentUser.uid).set({i
 function loadUserData(uid){
   db.collection("users").doc(uid).onSnapshot(doc=>{
     const data = doc.data();
-    if(data){ income = data.income||income; bills = data.bills||bills; recalc(); }
+    if(data){
+      income = data.income||income;
+      const loadedBills = Array.isArray(data.bills) ? data.bills : [];
+      let needsSave = false;
+      bills = loadedBills
+        .map(b => {
+          if (!b || typeof b !== "object") return null;
+          if (!b.id) {
+            needsSave = true;
+            return { ...b, id: generateId() };
+          }
+          return b;
+        })
+        .filter(Boolean);
+      if (needsSave) saveUserData();
+      recalc();
+    }
   });
 }
 
@@ -623,29 +816,46 @@ function toggleBills() {
     alert("Please input your income first.");
     return;
   }
+  setBillsVisible(!billsVisible);
+}
 
-  billsVisible = !billsVisible;
-
+function setBillsVisible(visible){
+  billsVisible = visible;
   document.getElementById("billList").style.display =
     billsVisible ? "block" : "none";
+  const toggleBtn = document.getElementById("toggleBtn");
+  if (toggleBtn) toggleBtn.classList.toggle("is-open", billsVisible);
+}
 
-  document.getElementById("toggleText").textContent =
-    billsVisible ? "Hide" : "Show";
-
-  // 🔍 Show / hide filter icon
-  document.getElementById("filterBtn").style.display =
-    billsVisible && bills.length >= 2 ? "flex" : "none";
+function quickAddBill(){
+  if (!income.nextPayday) {
+    alert("Please input your income first.");
+    return;
+  }
+  if (!billsVisible) setBillsVisible(true);
+  const id = generateId();
+  focusBillId = id;
+  pendingBills.unshift({
+    id,
+    name: "",
+    amount: null,
+    frequency: "",
+    date: "",
+    placeholder: true
+  });
+  expandedBillIds.add(id);
+  renderBills();
 }
 
 function showModal(id){
   document.getElementById(id).style.display="flex";
-  if(id==="billsModal" && editIndex===null){
+  if(id==="billsModal" && editBillId===null){
     document.getElementById("newBillName").value="";
     document.getElementById("newBillAmount").value="";
     document.getElementById("newBillStart").value="";
   }
 }
-function closeModal(id){ if(id!=="loginModal") {document.getElementById(id).style.display="none"; editIndex=null;} }
+function closeModal(id){ if(id!=="loginModal") {document.getElementById(id).style.display="none"; editBillId=null;} }
 
 function saveIncome() {
   const amount = parseFloat(document.getElementById("incomeAmount").value);
@@ -671,11 +881,12 @@ function addBill() {
   if (isNaN(amount) || amount < 0) { alert("Please enter a valid amount for the bill."); return; }
   if (!startDate) { alert("Please select a start date for the bill."); return; }
 
-  if(editIndex!==null){
-    bills[editIndex]={name, amount, frequency, date:startDate};
-    editIndex=null;
+  if(editBillId!==null){
+    const idx = bills.findIndex(b => b.id === editBillId);
+    if (idx >= 0) bills[idx] = { ...bills[idx], name, amount, frequency, date:startDate };
+    editBillId=null;
   } else {
-    bills.push({name, amount, frequency, date:startDate});
+    bills.push({ id: generateId(), name, amount, frequency, date:startDate });
   }
 
   saveUserData();
@@ -683,6 +894,389 @@ function addBill() {
   recalc();
 }
 
+function updateBillFields(billId, fields){
+  let target = bills.find(b => b.id === billId);
+  if (!target) {
+    const pendingIndex = pendingBills.findIndex(b => b.id === billId);
+    if (pendingIndex === -1) return;
+    let pendingBill = pendingBills[pendingIndex];
+    pendingBill = { ...pendingBill, ...fields };
+    pendingBills[pendingIndex] = pendingBill;
+    const ready =
+      (pendingBill.name && pendingBill.name.trim().length > 0) &&
+      (pendingBill.frequency && String(pendingBill.frequency).trim().length > 0) &&
+      (pendingBill.date && String(pendingBill.date).trim().length > 0) &&
+      (pendingBill.amount !== null && pendingBill.amount !== undefined && !isNaN(Number(pendingBill.amount)) && Number(pendingBill.amount) > 0);
+    if (ready) {
+      pendingBill.placeholder = false;
+      const newBill = { ...pendingBill };
+      delete newBill.placeholder;
+      bills.unshift(newBill);
+      pendingBills.splice(pendingIndex, 1);
+      saveUserData();
+      recalc();
+    } else {
+      renderBills();
+    }
+    return;
+  }
+  if (!target) return;
+  Object.assign(target, fields);
+  saveUserData();
+  recalc();
+}
+
+function formatBillDate(dateStr){
+  const d = dateStr ? new Date(dateStr) : null;
+  if (!d || isNaN(d.getTime())) return "Date";
+  return d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
+}
+
+function capitalize(text){
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function initInlineEditor(){
+  if (inlineEditorReady) return;
+  inlineEditorReady = true;
+  document.addEventListener("click", (e) => {
+    const editor = document.getElementById("inlineEditor");
+    if (!editor || editor.style.display !== "block") return;
+    if (editor.contains(e.target)) return;
+    closeInlineEditor();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeInlineEditor();
+  });
+}
+
+function openInlineEditor(bill, type, anchorEl){
+  initInlineEditor();
+  const editor = document.getElementById("inlineEditor");
+  if (!editor) return;
+  editor.innerHTML = "";
+
+  let input;
+  if (type === "date") {
+    input = document.createElement("input");
+    input.type = "date";
+    input.value = bill.date || "";
+    input.addEventListener("change", async () => {
+      await updateBillFields(bill.id, { date: input.value });
+      closeInlineEditor();
+    });
+  } else if (type === "amount") {
+    input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.step = "0.01";
+    input.value = bill.amount == null ? "" : Number(bill.amount);
+    input.addEventListener("change", async () => {
+      const value = input.value === "" ? null : Number(input.value);
+      await updateBillFields(bill.id, { amount: isNaN(value) ? null : value });
+      closeInlineEditor();
+    });
+  } else if (type === "frequency") {
+    input = document.createElement("select");
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Frequency";
+    placeholder.disabled = true;
+    input.appendChild(placeholder);
+    const currentFreq = bill.frequency || "weekly";
+    ["weekly", "biweekly", "monthly"].forEach(freq => {
+      const opt = document.createElement("option");
+      opt.value = freq;
+      opt.textContent = capitalize(freq);
+      if (currentFreq === freq) opt.selected = true;
+      input.appendChild(opt);
+    });
+    input.addEventListener("change", async () => {
+      await updateBillFields(bill.id, { frequency: input.value });
+      closeInlineEditor();
+    });
+  }
+
+  if (!input) return;
+  editor.appendChild(input);
+  positionInlineEditor(editor, anchorEl);
+  editor.style.display = "block";
+  editor.setAttribute("aria-hidden", "false");
+  setTimeout(() => {
+    input.focus();
+    if (input.type === "date" && typeof input.showPicker === "function") {
+      input.showPicker();
+    }
+  }, 0);
+}
+
+function openOccurrenceDatePicker(bill, anchorEl, presetDate){
+  initInlineEditor();
+  const editor = document.getElementById("inlineEditor");
+  if (!editor) return;
+  editor.innerHTML = "";
+
+  const input = document.createElement("input");
+  input.type = "date";
+  input.value = presetDate || bill.date || "";
+  input.addEventListener("change", async () => {
+    await updateBillFields(bill.id, { date: input.value });
+    closeInlineEditor();
+  });
+
+  editor.appendChild(input);
+  positionInlineEditor(editor, anchorEl);
+  editor.style.display = "block";
+  editor.setAttribute("aria-hidden", "false");
+  setTimeout(() => input.focus(), 0);
+}
+
+function positionInlineEditor(editor, anchorEl){
+  const rect = anchorEl.getBoundingClientRect();
+  editor.style.left = "0px";
+  editor.style.top = "0px";
+  editor.style.display = "block";
+  const w = editor.offsetWidth;
+  const h = editor.offsetHeight;
+  const left = Math.min(window.innerWidth - w - 8, Math.max(8, rect.left));
+  const top = Math.min(window.innerHeight - h - 8, rect.bottom + 6);
+  editor.style.left = `${left}px`;
+  editor.style.top = `${top}px`;
+}
+
+function closeInlineEditor(){
+  const editor = document.getElementById("inlineEditor");
+  if (!editor) return;
+  editor.style.display = "none";
+  editor.setAttribute("aria-hidden", "true");
+}
+
+function setupDragReorder(list){
+  if (!dragState.listenersReady) {
+    dragState.listenersReady = true;
+    document.addEventListener("pointerup", () => endDrag(list));
+    document.addEventListener("pointercancel", () => endDrag(list));
+  }
+  const wrappers = Array.from(list.querySelectorAll(".bill-wrapper"));
+  wrappers.forEach(wrapper => {
+    const row = wrapper.querySelector(".bill-row");
+    if (!row) return;
+
+    row.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("button, input, select, textarea, a")) return;
+      if (wrapper.dataset.pending === "true") return;
+      if (e.pointerType === "mouse") e.preventDefault();
+      dragState.pointerDown = true;
+      dragState.pointerId = e.pointerId;
+      dragState.startX = e.clientX;
+      dragState.startY = e.clientY;
+      const delay = e.pointerType === "touch" ? 500 : 400;
+      cancelLongPress();
+      dragState.longPressTimer = setTimeout(() => {
+        startDrag(wrapper, list, e);
+      }, delay);
+      row.setPointerCapture(e.pointerId);
+    });
+
+    row.addEventListener("pointermove", (e) => {
+      if (dragState.active) {
+        handleDragMove(list, e);
+        return;
+      }
+      if (!dragState.longPressTimer) return;
+      const dx = Math.abs(e.clientX - dragState.startX);
+      const dy = Math.abs(e.clientY - dragState.startY);
+      if (dx > 6 || dy > 6) cancelLongPress();
+    });
+
+    row.addEventListener("pointerup", () => endDrag(list));
+    row.addEventListener("pointercancel", () => endDrag(list));
+  });
+}
+
+function cancelLongPress(){
+  clearTimeout(dragState.longPressTimer);
+  dragState.longPressTimer = null;
+}
+
+function startDrag(wrapper, list, e){
+  if (!dragState.pointerDown) return;
+  dragState.active = true;
+  dragState.dragEl = wrapper;
+  dragState.justDragged = true;
+  list.classList.add("reorder-mode");
+  list.classList.add("dragging");
+  wrapper.classList.add("dragging");
+  if (expandedBillIds.size > 0) {
+    expandedBillIds.clear();
+    list.querySelectorAll(".bill-details.show").forEach(el => el.classList.remove("show"));
+    list.querySelectorAll(".bill-actions.show").forEach(el => el.classList.remove("show"));
+  }
+  const items = Array.from(list.querySelectorAll(".bill-wrapper"))
+    .filter(el => el.dataset.pending !== "true");
+  dragState.items = items;
+  dragState.items.forEach(item => item.classList.add("reorder-mode"));
+  dragState.startIndex = items.indexOf(wrapper);
+  dragState.currentIndex = dragState.startIndex;
+  dragState.positions = items.map(el => el.getBoundingClientRect());
+  dragState.gap = computeGap(dragState.positions);
+  const rect = wrapper.getBoundingClientRect();
+  dragState.offsetY = e.clientY - rect.top;
+  dragState.startY = e.clientY;
+  dragState.lastDeltaY = 0;
+  dragState.dragDirection = null;
+  wrapper.style.display = "block";
+  if (e && typeof e.preventDefault === "function") e.preventDefault();
+}
+
+function handleDragMove(list, e){
+  if (!dragState.active || !dragState.dragEl) return;
+  if (e && typeof e.preventDefault === "function") e.preventDefault();
+  autoScrollOnDrag(e);
+  const rect = dragState.positions[dragState.startIndex];
+  const rawDeltaY = e.clientY - dragState.startY;
+  const listRect = list.getBoundingClientRect();
+  let minDelta = listRect.top - rect.top;
+  let maxDelta = listRect.bottom - rect.bottom;
+  const deltaY = Math.max(minDelta, Math.min(rawDeltaY, maxDelta));
+  dragState.dragEl.style.transform = `translateY(${deltaY}px)`;
+  dragState.dragEl.style.zIndex = "3";
+  dragState.dragEl.style.opacity = "0.95";
+  const dragCenterY = rect.top + deltaY + rect.height / 2;
+  const targetIndex = getTargetIndexFromPositions(dragCenterY, dragState.positions, dragState.startIndex);
+  if (targetIndex !== dragState.currentIndex) {
+    dragState.items.forEach(item => item.classList.remove("reorder-target"));
+    if (dragState.items[targetIndex]) dragState.items[targetIndex].classList.add("reorder-target");
+    dragState.currentIndex = targetIndex;
+    applyItemTransforms();
+  }
+  dragState.lastDeltaY = deltaY;
+}
+
+function endDrag(list){
+  if (dragState.longPressTimer) cancelLongPress();
+  dragState.pointerDown = false;
+  if (!dragState.active) return;
+  dragState.active = false;
+  if (dragState.dragEl) dragState.dragEl.classList.remove("dragging");
+  dragState.items.forEach(item => item.classList.remove("reorder-mode"));
+  dragState.items.forEach(item => item.classList.remove("reorder-target"));
+  list.classList.remove("reorder-mode");
+  list.classList.remove("dragging");
+  if (dragState.dragEl) {
+    dragState.dragEl.style.display = "";
+  }
+  finalizeOrder(list);
+  const orderedIds = Array.from(list.querySelectorAll(".bill-wrapper"))
+    .map(el => el.dataset.billId)
+    .filter(Boolean);
+  const pendingMap = new Map(pendingBills.map(b => [b.id, b]));
+  const billMap = new Map(bills.map(b => [b.id, b]));
+  const newPending = [];
+  const newBills = [];
+  orderedIds.forEach(id => {
+    if (pendingMap.has(id)) newPending.push(pendingMap.get(id));
+    else if (billMap.has(id)) newBills.push(billMap.get(id));
+  });
+  if (newPending.length || newBills.length) {
+    pendingBills = newPending;
+    bills = newBills;
+    manualOrder = true;
+    billFilters.sort = "none";
+    const sortSelect = document.getElementById("sortSelect");
+    if (sortSelect) sortSelect.value = "none";
+    saveUserData();
+  }
+  dragState.dragEl = null;
+  dragState.items = [];
+  dragState.positions = [];
+  dragState.startIndex = -1;
+  dragState.currentIndex = -1;
+  setTimeout(() => { dragState.justDragged = false; }, 0);
+  recalc();
+}
+
+function autoScrollOnDrag(e){
+  const edge = 80;
+  const y = e.clientY;
+  const max = window.innerHeight;
+  if (y < edge) window.scrollBy(0, -10);
+  else if (y > max - edge) window.scrollBy(0, 10);
+}
+
+function computeGap(rects){
+  const gaps = [];
+  for (let i = 0; i < rects.length - 1; i++) {
+    const gap = rects[i + 1].top - (rects[i].top + rects[i].height);
+    if (gap > 0) gaps.push(gap);
+  }
+  return gaps.length ? Math.min(...gaps) : 0;
+}
+
+function getTargetIndexFromPositions(dragCenterY, rects, startIndex){
+  if (!rects || rects.length === 0) return startIndex;
+  const firstMid = rects[0].top + rects[0].height / 2;
+  if (dragCenterY <= firstMid) return 0;
+  const startRect = rects[startIndex];
+  if (startRect && dragCenterY >= startRect.top && dragCenterY <= startRect.bottom) {
+    return startIndex;
+  }
+  let target = startIndex;
+  for (let i = 0; i < rects.length; i++) {
+    if (i === startIndex) continue;
+    const mid = rects[i].top + rects[i].height / 2;
+    if (dragCenterY < mid) return i;
+    if (i === rects.length - 1) target = i;
+  }
+  return target;
+}
+
+function applyItemTransforms(){
+  const start = dragState.startIndex;
+  const target = dragState.currentIndex;
+  const shift = (dragState.positions[start]?.height || 0) + dragState.gap;
+  dragState.items.forEach((item, i) => {
+    if (i === start) return;
+    let offset = 0;
+    if (i > start && i <= target) offset = -shift;
+    if (i < start && i >= target) offset = shift;
+    item.style.transform = offset ? `translateY(${offset}px)` : "";
+  });
+}
+
+function finalizeOrder(list){
+  if (!dragState.dragEl) return;
+  const start = dragState.startIndex;
+  let target = dragState.currentIndex;
+  if (target < 0) target = start;
+  const items = dragState.items;
+  if (target !== start) {
+    const reference = items[target];
+    if (reference && reference !== dragState.dragEl) {
+      if (target > start) {
+        const next = reference.nextElementSibling;
+        list.insertBefore(dragState.dragEl, next);
+      } else {
+        list.insertBefore(dragState.dragEl, reference);
+      }
+    }
+  }
+  items.forEach(el => {
+    el.style.transform = "";
+    el.style.transition = "";
+    el.style.zIndex = "";
+  });
+  dragState.dragEl.style.transform = "";
+  dragState.dragEl.style.zIndex = "";
+}
+
+// Reorder intentionally disabled (reset to no drag logic)
+
+function setNameInputSize(input){
+  const text = input.value || input.placeholder || "";
+  input.size = Math.max(text.length, 6);
+}
 
 // ==================== BILL RENDER ====================
 function renderBills() {
@@ -703,173 +1297,218 @@ function renderBills() {
   }
 
   // Map bills with next occurrence date
-  let billsWithNextDate = filteredBills.map((b, index) => ({
+  let billsWithNextDate = filteredBills.map(b => ({
     bill: b,
-    originalIndex: index,
-    nextDate: getNextBillDate(b, periodStart)
+    nextDate: b.date ? getNextBillDate(b, periodStart) : null
   }));
 
-  // Sort by selected option
-  billsWithNextDate.sort((a, b) => {
-    if (billFilters.sort === "amount-desc") return b.bill.amount - a.bill.amount;
-    if (billFilters.sort === "amount-asc") return a.bill.amount - b.bill.amount;
-    if (billFilters.sort === "date-desc") return b.nextDate - a.nextDate; // farthest → closest
-    return a.nextDate - b.nextDate; // closest → farthest
-  });
+  // Sort by selected option (respect manual order when no sort filter is applied)
+  if (billFilters.sort !== "none") {
+    billsWithNextDate.sort((a, b) => {
+      const aAmt = (a.bill.amount == null || isNaN(a.bill.amount)) ? null : Number(a.bill.amount);
+      const bAmt = (b.bill.amount == null || isNaN(b.bill.amount)) ? null : Number(b.bill.amount);
+      const aDate = a.nextDate ? a.nextDate.getTime() : Infinity;
+      const bDate = b.nextDate ? b.nextDate.getTime() : Infinity;
+      if (billFilters.sort === "amount-desc") return (bAmt ?? -Infinity) - (aAmt ?? -Infinity);
+      if (billFilters.sort === "amount-asc") return (aAmt ?? Infinity) - (bAmt ?? Infinity);
+      if (billFilters.sort === "date-desc") return bDate - aDate; // farthest → closest
+      return aDate - bDate; // closest → farthest
+    });
+  } else if (manualOrder) {
+    const orderMap = new Map(bills.map((b, i) => [b.id, i]));
+    billsWithNextDate.sort((a, b) => (orderMap.get(a.bill.id) ?? 0) - (orderMap.get(b.bill.id) ?? 0));
+  }
 
   const list = document.getElementById("billList");
   list.innerHTML = "";
 
-  if (billsWithNextDate.length === 0) {
+  const pendingForDisplay = pendingBills.map(b => ({ bill: b, nextDate: null }));
+  const billsForDisplay = pendingForDisplay.length
+    ? [...pendingForDisplay, ...billsWithNextDate]
+    : billsWithNextDate;
+
+  if (billsForDisplay.length === 0) {
     list.innerHTML = `<div style="text-align:center;color:#888; font-size:0.9rem;">No bills yet</div>`;
     updateTotals(periodStart, periodEnd);
     return;
   }
 
-  billsWithNextDate.forEach((bData, i) => {
+  billsForDisplay.forEach((bData, i) => {
     const b = bData.bill;
-    const originalIndex = bData.originalIndex;
 
     const billEl = document.createElement("div");
     billEl.className = "bill-wrapper";
+    billEl.dataset.billId = b.id;
+    if (b.placeholder === true) billEl.dataset.pending = "true";
 
     const inner = document.createElement("div");
     inner.className = "bill";
-
-    const [y1, m1, d1] = b.date.split("-");
-    let current = new Date(y1, m1 - 1, d1);
-    const step = { weekly: 7, biweekly: 14, monthly: 1 }[b.frequency];
-    const occurrences = [];
-
-    if (b.frequency === "monthly") {
-      if (current >= periodStart && current <= periodEnd) occurrences.push(new Date(current));
-    } else {
-      while (current <= periodEnd) {
-        if (current >= periodStart) occurrences.push(new Date(current));
-        current.setDate(current.getDate() + step);
-      }
-    }
-
-    const dateChips = occurrences
-      .map(dt => `<span class="chip">${dt.toLocaleDateString("en-US",{month:"short", day:"numeric"})}</span>`)
-      .join("•");
+    const expanded = expandedBillIds.has(b.id) || b.placeholder === true;
+    const dueLabel = formatBillDate(b.date);
+    const freqLabel = (b.placeholder && !b.frequency) ? "Frequency" : (b.frequency ? capitalize(b.frequency) : "Frequency");
+    const isPending = b.placeholder === true;
+    const occurrences = getBillOccurrencesInPeriod(b, periodStart, periodEnd);
+    const occurrenceChips = occurrences
+      .map(dt => {
+        const iso = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+        return `<button class="chip chip-occurrence" data-occurrence="${iso}" data-bill="${b.id}" aria-label="Set anchor date">${dt.toLocaleDateString("en-US",{month:"short", day:"numeric"})}</button>`;
+      })
+      .join("");
+    const hasAmount = !(b.amount == null || isNaN(b.amount));
+    const amountInline = hasAmount ? `$${Number(b.amount).toFixed(2)}` : "—";
+    const amountLabel = hasAmount ? `$${Number(b.amount).toFixed(2)}` : "—";
 
     inner.innerHTML = `
-      <div class="bill-main" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
-        <div style="display:flex; flex-direction:column;">
-          <div style="display:flex; align-items:center; gap:0.5rem;">
-            <span style="font-weight:500; margin-bottom:6px;">${b.name}</span>
+      <div class="bill-row">
+        <div class="bill-content">
+          <input class="bill-name-input" type="text" placeholder="New Bill" aria-label="Bill name" />
+          <div class="bill-details ${expanded ? "show" : ""}">
+            <button class="chip chip-btn chip-rect" data-edit="frequency" data-bill="${b.id}" aria-label="Edit frequency">${freqLabel}</button>
+            ${isPending
+              ? `<button class="chip chip-btn" data-edit="date" data-bill="${b.id}" aria-label="Edit anchor date">${dueLabel}</button>`
+              : (occurrenceChips
+                  ? `<div class="occurrence-chips">${occurrenceChips}</div>`
+                  : `<div class="occurrence-empty">No due dates this period</div>`)}
           </div>
-          <div><span class="frequencychip">${b.frequency.charAt(0).toUpperCase()+b.frequency.slice(1)}</span></div>
-          <div class="bill-meta" style="margin-top:4px; margin-left:-5px">${dateChips}</div>
         </div>
-        <div style="margin-left:auto; margin-right:0.5rem; display:flex; align-items:center;">
-          <span>$${b.amount.toFixed(2)}</span>
-        </div>
-        <div class="bill-actions" style="display:flex; gap:0.5rem; align-items:center;">
-          <div class="icon-row">
-            <button class="icon-btn" onclick="editBill(${originalIndex})">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                <path d="M3 21v-3l12-12 3 3-12 12H3z"/>
-              </svg>
-            </button>
-            <button class="icon-btn" onclick="deleteBill(${originalIndex})">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                <path d="M18.364 5.636a1 1 0 0 0-1.414 0L12 10.586 7.05 5.636a1 1 0 0 0-1.414 1.414L10.586 12l-4.95 4.95a1 1 0 1 0 1.414 1.414L12 13.414l4.95 4.95a1 1 0 0 0 1.414-1.414L13.414 12l4.95-4.95a1 1 0 0 0 0-1.414z"/>
-              </svg>
-            </button>
+
+        <div class="bill-right">
+          ${expanded
+            ? `<button class="bill-amount-btn" data-edit="amount" data-bill="${b.id}" aria-label="Edit amount">${amountLabel}</button>`
+            : `<span class="bill-amount">${amountInline}</span>`}
+          <div class="bill-actions ${expanded ? "show" : ""}">
+            <div class="icon-row">
+              <button class="icon-btn" onclick="deleteBill('${b.id}')" aria-label="Delete bill">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M18.364 5.636a1 1 0 0 0-1.414 0L12 10.586 7.05 5.636a1 1 0 0 0-1.414 1.414L10.586 12l-4.95 4.95a1 1 0 1 0 1.414 1.414L12 13.414l4.95 4.95a1 1 0 0 0 1.414-1.414L13.414 12l4.95-4.95a1 1 0 0 0 0-1.414z"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
     `;
 
-    inner.style.opacity = occurrences.length ? 1 : 0.5;
+    inner.style.opacity = hasAmount ? 1 : 0.8;
+    const row = inner.querySelector(".bill-row");
+    if (row) {
+      row.addEventListener("click", (e) => {
+        if (e.target.closest("button, input, select, textarea, a, .bill-actions, .chip-btn, .bill-name-btn")) return;
+        if (dragState.justDragged) return;
+        toggleBillDetails(b.id);
+      });
+    }
+    const nameInput = inner.querySelector(".bill-name-input");
+    if (nameInput) {
+      nameInput.value = b.name || "";
+      setNameInputSize(nameInput);
+      nameInput.addEventListener("input", () => {
+        setNameInputSize(nameInput);
+      });
+      nameInput.addEventListener("keydown", async (e) => {
+        if (e.key !== "Enter") return;
+        await updateBillFields(b.id, { name: nameInput.value.trim() });
+        nameInput.blur();
+      });
+      nameInput.addEventListener("blur", async () => {
+        await updateBillFields(b.id, { name: nameInput.value.trim() });
+        setNameInputSize(nameInput);
+      });
+      if (focusBillId === b.id) {
+        setTimeout(() => {
+          nameInput.focus();
+          nameInput.select();
+        }, 0);
+        focusBillId = null;
+      }
+    }
+
+    const editTargets = inner.querySelectorAll("[data-edit]");
+    editTargets.forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openInlineEditor(b, el.dataset.edit, el);
+      });
+    });
+    const occurrenceTargets = inner.querySelectorAll("[data-occurrence]");
+    occurrenceTargets.forEach((el) => {
+      el.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const nextDate = el.dataset.occurrence;
+        if (!nextDate) return;
+        openOccurrenceDatePicker(b, el, nextDate);
+      });
+    });
     billEl.appendChild(inner);
     list.appendChild(billEl);
 
-    if (i < billsWithNextDate.length - 1) {
+    if (i < billsForDisplay.length - 1) {
       const divider = document.createElement("div");
       divider.className = "bill-divider";
-      divider.innerHTML = `<div></div>`;
       list.appendChild(divider);
     }
   });
 
   updateTotals(periodStart, periodEnd);
-  
-    // Show/hide filter button
-  document.getElementById("filterBtn").style.display =
-    billsVisible && bills.length >= 2 ? "flex" : "none";
+
+  setupDragReorder(list);
 
 }
 
-// Helper: gets next occurrence of a bill after the given date
-function getNextBillDate(bill, startDate) {
+function toggleBillDetails(billId){
+  if (expandedBillIds.has(billId)) expandedBillIds.delete(billId);
+  else expandedBillIds.add(billId);
+  renderBills();
+}
+
+function getBillOccurrencesInPeriod(bill, periodStart, periodEnd){
+  if (!bill.date) return [];
   const [y, m, d] = bill.date.split("-");
   let current = new Date(y, m - 1, d);
-  const step = { weekly: 7, biweekly: 14, monthly: 1 }[bill.frequency];
-
+  if (isNaN(current.getTime())) return [];
+  const step = { weekly: 7, biweekly: 14, monthly: 1 }[bill.frequency || "monthly"];
+  const occurrences = [];
   if (bill.frequency === "monthly") {
-    while (current < startDate) current.setMonth(current.getMonth() + 1);
+    if (current >= periodStart && current <= periodEnd) occurrences.push(new Date(current));
   } else {
-    while (current < startDate) current.setDate(current.getDate() + step);
+    while (current <= periodEnd) {
+      if (current >= periodStart) occurrences.push(new Date(current));
+      current.setDate(current.getDate() + step);
+    }
   }
-
-  return current;
-}
-
-// No changes needed for these functions
-function getNextBillDate(bill, ref){
-  const [y,m,d] = bill.date.split("-");
-  let current = new Date(y,m-1,d);
-  const step = {weekly:7,biweekly:14,monthly:1}[bill.frequency];
-  if(bill.frequency==="monthly"){ 
-    return current>=ref ? current : new Date(current.getFullYear(), current.getMonth()+1, current.getDate()); 
-  } else { 
-    while(current<ref) current.setDate(current.getDate()+step); 
-    return current; 
-  }
-}
-
-function updateTotals(start,end){
-  let totalBills=0;
-  bills.forEach(b=>{
-    const [y2,m2,d2]=b.date.split("-");
-    let c=new Date(y2,m2-1,d2); 
-    const step={weekly:7,biweekly:14,monthly:1}[b.frequency]; 
-    let count=0;
-    if(b.frequency==="monthly"){ if(c>=start && c<=end) count=1; } 
-    else { while(c<=end){ if(c>=start) count++; c.setDate(c.getDate()+step); } }
-    totalBills += count*b.amount; 
-  });
-
-  const spending = income.amount-totalBills;
-  document.getElementById("spendingLeft").textContent=`$${spending.toFixed(2)}`;
-  document.getElementById("spendingLeft").className="hero-amount"+(spending<0?" negative":"");
-  document.getElementById("incomeValue").textContent=`$${income.amount.toFixed(2)}`;
-  document.getElementById("billsValue").textContent=`$${totalBills.toFixed(2)}`;
+  return occurrences;
 }
 
 // Helper: get next occurrence of a bill relative to a reference date
 function getNextBillDate(bill, ref){
+  if (!bill.date) return null;
   const [y,m,d] = bill.date.split("-");
   let current = new Date(y,m-1,d);
-  const step = {weekly:7,biweekly:14,monthly:1}[bill.frequency];
-  if(bill.frequency==="monthly"){ return current>=ref ? current : new Date(current.getFullYear(), current.getMonth()+1, current.getDate()); }
-  else { while(current<ref) current.setDate(current.getDate()+step); return current; }
+  if (isNaN(current.getTime())) return null;
+  const step = {weekly:7,biweekly:14,monthly:1}[bill.frequency || "monthly"];
+  if(bill.frequency==="monthly"){
+    return current>=ref ? current : new Date(current.getFullYear(), current.getMonth()+1, current.getDate());
+  } else {
+    while(current<ref) current.setDate(current.getDate()+step);
+    return current;
+  }
 }
 
 // Totals calculation
 function updateTotals(start,end){
   let totalBills=0;
   bills.forEach(b=>{
+    if (!b.date) return;
+    const amount = Number(b.amount);
+    if (isNaN(amount)) return;
     const [y2,m2,d2]=b.date.split("-");
-    let c=new Date(y2,m2-1,d2); 
-    const step={weekly:7,biweekly:14,monthly:1}[b.frequency]; 
+    let c=new Date(y2,m2-1,d2);
+    if (isNaN(c.getTime())) return;
+    const step={weekly:7,biweekly:14,monthly:1}[b.frequency || "monthly"];
     let count=0;
-    if(b.frequency==="monthly"){ if(c>=start && c<=end) count=1; } 
+    if(b.frequency==="monthly"){ if(c>=start && c<=end) count=1; }
     else { while(c<=end){ if(c>=start) count++; c.setDate(c.getDate()+step); } }
-    totalBills += count*b.amount; 
+    totalBills += count*amount;
   });
 
   const spending = income.amount-totalBills;
@@ -879,8 +1518,29 @@ function updateTotals(start,end){
   document.getElementById("billsValue").textContent=`$${totalBills.toFixed(2)}`;
 }
 
-function editBill(i){ editIndex=i; showModal("billsModal"); const b=bills[i]; document.getElementById("newBillName").value=b.name; document.getElementById("newBillAmount").value=b.amount; document.getElementById("newBillFrequency").value=b.frequency; document.getElementById("newBillStart").value=b.date; }
-function deleteBill(i){ if(confirm(`Delete bill "${bills[i].name}"?`)){ bills.splice(i,1); saveUserData(); recalc(); } }
+function editBill(billId){
+  editBillId=billId;
+  showModal("billsModal");
+  const b=bills.find(x => x.id === billId);
+  if (!b) return;
+  document.getElementById("newBillName").value=b.name || "";
+  document.getElementById("newBillAmount").value=b.amount ?? "";
+  document.getElementById("newBillFrequency").value=b.frequency || "monthly";
+  document.getElementById("newBillStart").value=b.date || "";
+}
+function deleteBill(billId){
+  const pendingIndex = pendingBills.findIndex(b => b.id === billId);
+  if (pendingIndex !== -1) {
+    pendingBills.splice(pendingIndex, 1);
+    renderBills();
+    return;
+  }
+  const idx = bills.findIndex(b => b.id === billId);
+  if (idx < 0) return;
+  bills.splice(idx,1);
+  saveUserData();
+  recalc();
+}
 
 function recalc(){ document.getElementById("heroIncomeLabel").textContent="Spending Money Left"; const heroSub = document.getElementById("heroSubText");
 heroSub.textContent = income.frequency === "weekly" ? "This week" :
@@ -914,31 +1574,11 @@ function updateTitleRandomly() {
 // Update every 3 seconds
 setInterval(updateTitleRandomly, 3000);
 
-// Filter logic
 function applyFilters() {
   billFilters.sort = document.getElementById("sortSelect").value;
   billFilters.frequency = document.getElementById("frequencyFilter").value;
   closeModal("filterModal");
   recalc();
-}
-
-const filterBtn = document.querySelector(".bills-header .icon-btn");
-
-function updateFilterBtnOpacity() {
-  if (!filterBtn) return;
-  filterBtn.style.opacity =
-    billFilters.sort !== "none" || billFilters.frequency !== "all"
-      ? "1"
-      : "0.6"; // slightly dim if no filters
-}
-
-// Call whenever filters are applied
-function applyFilters() {
-  billFilters.sort = document.getElementById("sortSelect").value;
-  billFilters.frequency = document.getElementById("frequencyFilter").value;
-  closeModal("filterModal");
-  recalc();
-  updateFilterBtnOpacity();
 }
 
 // Reset filters
@@ -958,8 +1598,39 @@ function resetFilters() {
   closeModal("filterModal");
 }
 
-// Initial filter button state
-updateFilterBtnOpacity();
+// Long-press on header to open filters (Tasker-style)
+const billsHeader = document.getElementById("billsHeader");
+let longPressTimer = null;
+let longPressTriggered = false;
+const LONG_PRESS_MS = 500;
+
+function startLongPress(){
+  if (!billsHeader) return;
+  longPressTriggered = false;
+  clearTimeout(longPressTimer);
+  longPressTimer = setTimeout(() => {
+    longPressTriggered = true;
+    showModal("filterModal");
+  }, LONG_PRESS_MS);
+}
+
+function cancelLongPress(){
+  clearTimeout(longPressTimer);
+  longPressTimer = null;
+}
+
+if (billsHeader) {
+  billsHeader.addEventListener("pointerdown", startLongPress);
+  billsHeader.addEventListener("pointerup", cancelLongPress);
+  billsHeader.addEventListener("pointerleave", cancelLongPress);
+  billsHeader.addEventListener("pointercancel", cancelLongPress);
+  billsHeader.addEventListener("click", (e) => {
+    if (!longPressTriggered) return;
+    e.preventDefault();
+    e.stopPropagation();
+    longPressTriggered = false;
+  });
+}
 
 </script>
 </body>
