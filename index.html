@@ -401,20 +401,6 @@ input[type="number"] {
   display: block;
 }
 
-@media (max-width: 768px) {
-  #incomeModal .sheet {
-    min-height: 35vh;
-    max-height: 60vh;
-  }
-  .modal input,
-  .modal select,
-  .modal textarea,
-  .modal button {
-    font-size: 16px;
-    -webkit-text-size-adjust: 100%;
-  }
-}
-
 #loginModal input { margin:0.5rem 0; }
 #loginModal button { background:#111; color:white; margin-top:1rem; }
 
@@ -441,12 +427,17 @@ input[type="number"] {
 }
 
 .mobile-only { display: none; }
+
+
 @media (max-width: 768px) {
-  .bill-actions {
-    opacity: 0;
-    pointer-events: auto;
+  .bill-name-input,
+  .bill-amount-btn,
+  .inline-editor input,
+  .inline-editor select,
+  #newBillAmount,
+  #newBillName {
+    font-size: 16px !important;
   }
-  .mobile-only { display: block; }
 }
 
 .bill-wrapper.no-due,
@@ -458,117 +449,6 @@ input[type="number"] {
   filter: grayscale(0.2);
 }
 
-/* MOBILE FIXES */
-@media (max-width: 768px) {
-  body {
-    padding: 1rem 0.5rem 6rem; /* reduce padding on mobile */
-  }
-
-  .container {
-    width: 100%;
-    margin: 0.5rem auto;
-    padding: 0 0.5rem;
-  }
-
-  /* Bill actions only when expanded */
-  .bill-actions {
-    opacity: 0 !important;
-    pointer-events: auto;
-    flex-direction: row;
-    gap: 0.5rem;
-  }
-  .bill-actions.show { opacity: 1 !important; }
-
-  /* Ensure bill amounts and buttons stay in the same row as the bill name */
-  .bill-main {
-    flex-direction: row;       /* row layout */
-    align-items: center;       /* vertically center items */
-    justify-content: space-between;
-    width: 100%;
-    gap: 0.5rem;
-  }
-
-  /* Optional: prevent bill name from wrapping */
-  .bill-main > div:first-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex-shrink: 1;
-  }
-
-  /* Remove previous last-child margin adjustments */
-  .bill-main > div:last-child {
-    margin-top: 0;
-    margin-left: 0;
-  }
-
-  /* Make edit/delete buttons easier for thumb access */
-  .icon-row {
-    margin: 0;
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  /* Modal input scaling */
-  .modal input,
-  .modal select,
-  .modal textarea,
-  .modal button {
-    font-size: 16px;
-  }
-
-  /* Align with iOS minimum width so the date picker and text fields match */
-  #incomeModal .sheet input,
-  #incomeModal .sheet select,
-  .date-field input[type="date"] {
-    min-width: 220px;
-  }
-  
-  /* Date picker fixes */
-  .date-field input[type="date"] {
-    min-height: 40px;
-    font-size: 16px;
-    padding: 0.4rem;
-  }
-
-  /* Mobile-only labels */
-  .mobile-only {
-    display: block !important;
-    margin-top: 0.25rem;
-    font-size: 0.75rem;
-    color: #666;
-  }
-
-  /* Controls spacing */
-  .controls button {
-    font-size: 0.85rem;
-    padding: 0.7rem 0.5rem;
-    margin-bottom: 0.35rem;
-  }
-  .controls {
-    padding-bottom: calc(0.9rem + env(safe-area-inset-bottom) + 0.6rem);
-  }
-
-
-  /* Hero section scaling */
-  .hero-amount {
-    font-size: 2.2rem;
-  }
-
-  .hero-label,
-  .hero-sub {
-    font-size: 0.75rem;
-  }
-
-  /* Context cards */
-  .context-card {
-    padding: 0.8rem;
-  }
-
-  .context-value {
-    font-size: 1.1rem;
-  }
-}
 
 /* Billio app name above welcome text */
 #loginModal .modal .app-name {
@@ -601,6 +481,143 @@ input[type="number"] {
 
 #filterBtn {
   transition: opacity 0.2s ease;
+}
+
+/* ================= MASTER MOBILE STYLES — DESKTOP PARITY ================= */
+@media (max-width: 768px) {
+
+  /* ---------- GLOBAL SCALE ---------- */
+  body {
+    padding: 1.2rem 0.7rem 6.5rem;
+  }
+
+  .container {
+    width: 100%;
+    margin: 0.6rem auto;
+    padding: 0 0.5rem;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    padding: 1.6rem;
+  }
+
+  .hero-amount {
+    font-size: 2.3rem;
+  }
+
+  .hero-label,
+  .hero-sub {
+    font-size: 0.82rem;
+  }
+
+  /* ---------- CONTEXT CARDS ---------- */
+  .context-card {
+    padding: 1rem;
+  }
+
+  .context-value {
+    font-size: 1.15rem;
+  }
+
+  /* ---------- BILL LIST SCALE ONLY ---------- */
+  .bill {
+    padding: 0.4rem 0;
+  }
+
+  /* === CRITICAL ROW ALIGNMENT RULE === */
+  .bill-row {
+    flex-wrap: nowrap;       /* prevents stacking */
+    align-items: center;     /* vertical alignment */
+  }
+
+  .bill-content {
+    min-width: 0;            /* allows ellipsis */
+  }
+
+  .bill-name-input {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bill-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .bill-amount,
+  .bill-amount-btn {
+    font-size: 16px;
+  }
+
+  /* ICONS — larger but same placement */
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .icon-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* CHIPS — proportional scaling */
+  .chip {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+
+  .chip-occurrence {
+    font-size: 0.72rem;
+  }
+
+  /* ---------- MODALS ---------- */
+  .modal input,
+  .modal select,
+  .modal textarea,
+  .modal button {
+    font-size: 16px;
+    width: 100%;
+  }
+
+  /* ---------- PAY SCHEDULE (iOS FIX) ---------- */
+  #incomeModal input,
+  #incomeModal select,
+  #incomeModal button {
+    font-size: 16px !important;
+    width: 100%;
+    min-width: 0;
+    -webkit-appearance: none;
+  }
+
+  #incomeModal input[type="date"] {
+    min-height: 40px;
+  }
+
+  /* ---------- CONTROLS BAR ---------- */
+  .controls button {
+    font-size: 0.9rem;
+    padding: 0.8rem 0.6rem;
+    min-height: 46px;
+  }
+
+  .controls svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* ---------- MOBILE LABELS ---------- */
+  .mobile-only {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.3rem;
+  }
+
 }
 
 </style>
@@ -683,6 +700,7 @@ input[type="number"] {
       <span class="sheet-label">Frequency</span>
       <select id="incomeFrequency">
         <option value="" disabled selected>Frequency</option>
+        <option value="once">One-time</option>
         <option value="weekly">Weekly</option>
         <option value="biweekly">Biweekly</option>
         <option value="monthly">Monthly</option>
@@ -708,6 +726,7 @@ input[type="number"] {
     <input type="text" id="newBillAmount" inputmode="decimal" placeholder="Amount">
     <select id="newBillFrequency">
       <option value="" disabled selected hidden>Frequency</option>
+      <option value="once">Once</option>
       <option value="weekly">Weekly</option>
       <option value="biweekly">Biweekly</option>
       <option value="monthly">Monthly</option>
@@ -737,10 +756,12 @@ input[type="number"] {
     <label class="input-label">Frequency</label>
     <select id="frequencyFilter">
       <option value="all">All</option>
+      <option value="once">One-time</option>
       <option value="weekly">Weekly</option>
       <option value="biweekly">Biweekly</option>
       <option value="monthly">Monthly</option>
     </select>
+
 
     <button onclick="applyFilters()">Apply Filters</button>
     <p style="text-align:center; margin-top:0.5rem; font-size:0.75rem; color:#111; cursor:pointer;" onclick="resetFilters()">Reset</p>
@@ -1148,6 +1169,7 @@ function formatBillDate(dateStr){
 
 function capitalize(text){
   if (!text) return "";
+  if (text === "once") return "One-time";
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
@@ -1201,7 +1223,7 @@ function openInlineEditor(bill, type, anchorEl){
     placeholder.selected = !bill.frequency;
     input.appendChild(placeholder);
     const currentFreq = bill.frequency || "";
-    ["weekly", "biweekly", "monthly"].forEach(freq => {
+    ["once", "weekly", "biweekly", "monthly"].forEach(freq => {
       const opt = document.createElement("option");
       opt.value = freq;
       opt.textContent = capitalize(freq);
@@ -1521,9 +1543,14 @@ function renderBills() {
   const periodStart = new Date(yStart, mStart - 1, dStart);
 
   const periodEnd = new Date(periodStart);
+  if (income.frequency === "once") {
+  // one-day period
+  periodEnd.setDate(periodStart.getDate());
+  }
   if (income.frequency === "weekly") periodEnd.setDate(periodStart.getDate() + 6);
   if (income.frequency === "biweekly") periodEnd.setDate(periodStart.getDate() + 13);
   if (income.frequency === "monthly") periodEnd.setMonth(periodStart.getMonth() + 1, 0);
+
 
   // Apply frequency filter
   let filteredBills = bills;
@@ -1691,7 +1718,7 @@ function renderBills() {
     billEl.appendChild(inner);
     list.appendChild(billEl);
 
-    if (i < billsForDisplay.length - 1) {
+    if (i < uniqueBillsForDisplay.length - 1) {
       const divider = document.createElement("div");
       divider.className = "bill-divider";
       list.appendChild(divider);
@@ -1712,21 +1739,50 @@ function toggleBillDetails(billId){
 
 function getBillOccurrencesInPeriod(bill, periodStart, periodEnd){
   if (!bill.date) return [];
+
   const [y, m, d] = bill.date.split("-");
   let current = new Date(y, m - 1, d);
   if (isNaN(current.getTime())) return [];
-  const step = { weekly: 7, biweekly: 14, monthly: 1 }[bill.frequency || "monthly"];
+
+  // ONCE = only that exact date
+  if (bill.frequency === "once") {
+    return (current >= periodStart && current <= periodEnd)
+      ? [new Date(current)]
+      : [];
+  }
+
   const occurrences = [];
+
+  // MONTHLY
   if (bill.frequency === "monthly") {
-    if (current >= periodStart && current <= periodEnd) occurrences.push(new Date(current));
-  } else {
+    // advance month-by-month until we reach the pay period
+    while (current < periodStart) {
+      current = new Date(
+        current.getFullYear(),
+        current.getMonth() + 1,
+        current.getDate()
+      );
+    }
+
+    if (current >= periodStart && current <= periodEnd) {
+      occurrences.push(new Date(current));
+    }
+  }
+  // WEEKLY / BIWEEKLY (default to biweekly if missing)
+  else {
+    const step = { weekly: 7, biweekly: 14 }[bill.frequency] || 14;
+
     while (current <= periodEnd) {
-      if (current >= periodStart) occurrences.push(new Date(current));
+      if (current >= periodStart) {
+        occurrences.push(new Date(current));
+      }
       current.setDate(current.getDate() + step);
     }
   }
+
   return occurrences;
 }
+
 
 // Helper: get next occurrence of a bill relative to a reference date
 function getNextBillDate(bill, ref){
@@ -1734,13 +1790,28 @@ function getNextBillDate(bill, ref){
   const [y,m,d] = bill.date.split("-");
   let current = new Date(y,m-1,d);
   if (isNaN(current.getTime())) return null;
-  const step = {weekly:7,biweekly:14,monthly:1}[bill.frequency || "monthly"];
-  if(bill.frequency==="monthly"){
-    return current>=ref ? current : new Date(current.getFullYear(), current.getMonth()+1, current.getDate());
-  } else {
-    while(current<ref) current.setDate(current.getDate()+step);
-    return current;
+
+  // ONCE = only the anchor date, or null if already passed
+  if (bill.frequency === "once") {
+    return current >= ref ? current : null;
   }
+
+  if (bill.frequency === "monthly") {
+  while (current < ref) {
+    current = new Date(
+      current.getFullYear(),
+      current.getMonth() + 1,
+      current.getDate()
+    );
+  }
+  return current;
+}
+
+const step = { weekly: 7, biweekly: 14 }[bill.frequency] || 14;
+while (current < ref) {
+  current.setDate(current.getDate() + step);
+}
+return current;
 }
 
 // Totals calculation
@@ -1753,10 +1824,26 @@ function updateTotals(start,end){
     const [y2,m2,d2]=b.date.split("-");
     let c=new Date(y2,m2-1,d2);
     if (isNaN(c.getTime())) return;
-    const step={weekly:7,biweekly:14,monthly:1}[b.frequency || "monthly"];
-    let count=0;
-    if(b.frequency==="monthly"){ if(c>=start && c<=end) count=1; }
-    else { while(c<=end){ if(c>=start) count++; c.setDate(c.getDate()+step); } }
+    let count = 0;
+
+    // ONCE
+    if (b.frequency === "once") {
+      if (c >= start && c <= end) count = 1;
+    }
+    // MONTHLY
+    else if (b.frequency === "monthly") {
+      if (c >= start && c <= end) count = 1;
+    }
+    // WEEKLY / BIWEEKLY
+    else {
+      const step = { weekly: 7, biweekly: 14 }[b.frequency] || 14;
+      while (c <= end) {
+        if (c >= start) count++;
+        c.setDate(c.getDate() + step);
+      }
+    }
+
+    
     totalBills += count*amount;
   });
 
@@ -1792,9 +1879,11 @@ function deleteBill(billId){
 }
 
 function recalc(){ document.getElementById("heroIncomeLabel").textContent="Spending Money Left"; const heroSub = document.getElementById("heroSubText");
-heroSub.textContent = income.frequency === "weekly" ? "This week" :
-                      income.frequency === "biweekly" ? "This pay period" :
-                      "This month";
+heroSub.textContent =
+  income.frequency === "once" ? "One-time income" :
+  income.frequency === "weekly" ? "This week" :
+  income.frequency === "biweekly" ? "This pay period" :
+  "This month";
 renderBills(); }
   
 // ====== WELCOME TITLE ANIMATION ======
@@ -1849,35 +1938,37 @@ function resetFilters() {
 
 // Long-press on header to open filters (Tasker-style)
 const billsHeader = document.getElementById("billsHeader");
-let longPressTimer = null;
-let longPressTriggered = false;
-const LONG_PRESS_MS = 500;
+let headerLongPressTimer = null;
+let headerLongPressTriggered = false;
+const HEADER_LONG_PRESS_MS = 500;
 
-function startLongPress(){
+function startHeaderLongPress() {
   if (!billsHeader) return;
-  longPressTriggered = false;
-  clearTimeout(longPressTimer);
-  longPressTimer = setTimeout(() => {
-    longPressTriggered = true;
+  headerLongPressTriggered = false;
+  clearTimeout(headerLongPressTimer);
+  headerLongPressTimer = setTimeout(() => {
+    headerLongPressTriggered = true;
     showModal("filterModal");
-  }, LONG_PRESS_MS);
+  }, HEADER_LONG_PRESS_MS);
 }
 
-function cancelLongPress(){
-  clearTimeout(longPressTimer);
-  longPressTimer = null;
+function cancelHeaderLongPress() {
+  clearTimeout(headerLongPressTimer);
+  headerLongPressTimer = null;
 }
 
 if (billsHeader) {
-  billsHeader.addEventListener("pointerdown", startLongPress);
-  billsHeader.addEventListener("pointerup", cancelLongPress);
-  billsHeader.addEventListener("pointerleave", cancelLongPress);
-  billsHeader.addEventListener("pointercancel", cancelLongPress);
+  billsHeader.addEventListener("pointerdown", startHeaderLongPress);
+  billsHeader.addEventListener("pointerup", cancelHeaderLongPress);
+  billsHeader.addEventListener("pointerleave", cancelHeaderLongPress);
+  billsHeader.addEventListener("pointercancel", cancelHeaderLongPress);
+
   billsHeader.addEventListener("click", (e) => {
-    if (!longPressTriggered) return;
+    // If long-press opened the modal, prevent the click from doing anything else
+    if (!headerLongPressTriggered) return;
     e.preventDefault();
     e.stopPropagation();
-    longPressTriggered = false;
+    headerLongPressTriggered = false;
   });
 }
 
