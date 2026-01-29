@@ -338,6 +338,8 @@ input[type="number"] {
 #incomeModal .sheet input,
 #incomeModal .sheet select {
   width: 100%;
+  min-width: 220px;
+  max-width: 100%;
   padding: 0.5rem;
   border-radius: 8px;
   border: 1px solid #ddd;
@@ -514,6 +516,13 @@ input[type="number"] {
   .modal button {
     font-size: 16px;
   }
+
+  /* Align with iOS minimum width so the date picker and text fields match */
+  #incomeModal .sheet input,
+  #incomeModal .sheet select,
+  .date-field input[type="date"] {
+    min-width: 220px;
+  }
   
   /* Date picker fixes */
   .date-field input[type="date"] {
@@ -534,6 +543,7 @@ input[type="number"] {
   .controls button {
     font-size: 0.85rem;
     padding: 0.7rem 0.5rem;
+    margin-bottom: 0.35rem;
   }
   .controls {
     padding-bottom: calc(0.9rem + env(safe-area-inset-bottom) + 0.6rem);
@@ -813,8 +823,21 @@ let dragState = {
   gap: 0,
   justDragged: false,
   listenersReady: false,
-  pointerDown: false
+  pointerDown: false,
+  touchGuardRow: null
 };
+
+function guardTouchScrolling(row){
+  if (!row) return;
+  row.style.touchAction = "none";
+  dragState.touchGuardRow = row;
+}
+
+function releaseTouchScrolling(){
+  if (!dragState.touchGuardRow) return;
+  dragState.touchGuardRow.style.touchAction = "";
+  dragState.touchGuardRow = null;
+}
 
 let billFilters = {
   sort: "none",
@@ -1260,6 +1283,7 @@ function setupDragReorder(list){
       if (e.target.closest("input, select, textarea, a")) return;
       if (wrapper.dataset.pending === "true") return;
       if (e.pointerType === "mouse") e.preventDefault();
+      if (e.pointerType === "touch") guardTouchScrolling(row);
       // Switch to grabbing only after reorder activates
       dragState.pointerDown = true;
       dragState.pointerId = e.pointerId;
@@ -1284,8 +1308,14 @@ function setupDragReorder(list){
       if (dx > 6 || dy > 6) cancelLongPress();
     });
 
-    row.addEventListener("pointerup", () => endDrag(list));
-    row.addEventListener("pointercancel", () => endDrag(list));
+    row.addEventListener("pointerup", () => {
+      releaseTouchScrolling();
+      endDrag(list);
+    });
+    row.addEventListener("pointercancel", () => {
+      releaseTouchScrolling();
+      endDrag(list);
+    });
   });
 }
 
@@ -1293,6 +1323,7 @@ function cancelLongPress(){
   clearTimeout(dragState.longPressTimer);
   dragState.longPressTimer = null;
   if (!dragState.active) document.body.classList.remove("drag-cursor");
+  releaseTouchScrolling();
 }
 
 function startDrag(wrapper, list, e){
@@ -1357,6 +1388,7 @@ function handleDragMove(list, e){
 
 function endDrag(list){
   if (dragState.longPressTimer) cancelLongPress();
+  releaseTouchScrolling();
   dragState.pointerDown = false;
   document.body.classList.remove("drag-cursor");
   if (!dragState.active) return;
@@ -1531,13 +1563,22 @@ function renderBills() {
   const noDueBills = billsWithNextDate.filter(b => b.occurrences.length === 0);
   const billsForDisplay = [...pendingForDisplay, ...dueBills, ...noDueBills];
 
-  if (billsForDisplay.length === 0) {
+  const seenIds = new Set();
+  const uniqueBillsForDisplay = [];
+  for (const entry of billsForDisplay) {
+    const billId = entry.bill?.id;
+    if (!billId || seenIds.has(billId)) continue;
+    seenIds.add(billId);
+    uniqueBillsForDisplay.push(entry);
+  }
+
+  if (uniqueBillsForDisplay.length === 0) {
     list.innerHTML = `<div style="text-align:center;color:#888; font-size:0.9rem;">No bills yet</div>`;
     updateTotals(periodStart, periodEnd);
     return;
   }
 
-  billsForDisplay.forEach((bData, i) => {
+  uniqueBillsForDisplay.forEach((bData, i) => {
     const b = bData.bill;
 
     const billEl = document.createElement("div");
