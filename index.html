@@ -58,11 +58,11 @@ body.drag-cursor,
 body.drag-cursor * {
   cursor: grabbing !important;
 }
-.bill-content { display:flex; flex:1; flex-direction:column; gap:0.45rem; min-width:0; }
-.bill-details { display:none; flex-wrap:wrap; align-items:center; gap:0.4rem; row-gap:0.3rem; margin-top:0rem; }
+.bill-content { display:flex; flex:1; flex-direction:column; gap:0.4rem; min-width:0; }
+.bill-details { display:none; flex-wrap:wrap; align-items:center; gap:0.4rem; row-gap:0.55rem; margin-top:0rem; width:100%; justify-content:space-between; }
 .occurrence-chips,
 .occurrence-empty {
-  margin-top:0.4rem;
+  margin-top:0;
 }
 .bill-details.show { display:flex; }
 .bill-right { display:flex; align-items:flex-end; gap:0.4rem; white-space:nowrap; flex-shrink:0; margin-left:auto; margin-right:0.25rem; }
@@ -142,13 +142,19 @@ body.drag-cursor * {
   font-size:0.8rem;
   color:#222;
   border:none;
-  margin-right:0.35rem;
+  margin-right:0;
+  margin-bottom:0rem;
 }
 .chip-btn {
   background: transparent;
   border: none;
   color:#3c3c3c;
   cursor: pointer;
+}
+.bill-wrapper[data-pending="true"] .chip-btn[data-edit="date"] {
+  border: 1px solid #d7d7dd;
+  border-radius: 12px;
+  font-size: 0.8rem;
 }
 .occurrence-chips { display:flex; flex-wrap:wrap; gap:0.15rem; width:100%; margin-top:0; }
 .occurrence-chips .chip { font-size:0.65rem; padding:2px 6px; }
@@ -285,19 +291,21 @@ input[type="number"] {
 /* INCOME SHEET */
 #incomeModal {
   align-items: flex-end;
+  justify-content: flex-end;
   padding: 0;
   background: rgba(0,0,0,0.25);
 }
 #incomeModal .sheet {
   background: #fff;
   width: min(420px, 100%);
-  border-radius: 18px 18px 0 0;
+  border-radius: 20px 20px 0 0;
   padding: 1.5rem;
   padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
-  box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
-  max-height: 90vh;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  max-height: 70vh;
+  min-height: 50vh;
   overflow-y: auto;
-  margin-bottom: 0;
+  margin: 0 auto;
 }
 #incomeModal .sheet-header {
   display: flex;
@@ -385,6 +393,10 @@ input[type="number"] {
 }
 
 @media (max-width: 768px) {
+  #incomeModal .sheet {
+    min-height: 35vh;
+    max-height: 60vh;
+  }
   .modal input,
   .modal select,
   .modal textarea,
@@ -880,7 +892,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==================== EXISTING DASHBOARD LOGIC ====================
-function logout(){ if(confirm("Log out of your account?")) auth.signOut(); }
+function logout(){ auth.signOut(); }
 
 auth.onAuthStateChanged(user => {
   const dashboard = document.getElementById("dashboard");
@@ -1273,9 +1285,19 @@ function startDrag(wrapper, list, e){
   dragState.currentIndex = dragState.startIndex;
   dragState.positions = items.map(el => el.getBoundingClientRect());
   dragState.gap = computeGap(dragState.positions);
+  const startRect = dragState.positions[dragState.startIndex];
+  const firstRect = dragState.positions[0] || startRect;
+  const lastRect = dragState.positions[dragState.positions.length - 1] || startRect;
+  const rectHeight = startRect.height;
+  const dragCenterOffset = rectHeight / 2;
+  const firstMid = firstRect.top + firstRect.height / 2;
+  const lastMid = lastRect.top + lastRect.height / 2;
+  dragState.minDelta = firstMid - startRect.top - dragCenterOffset - 1;
+  dragState.maxDelta = lastMid - startRect.top - dragCenterOffset + 1;
   const rect = wrapper.getBoundingClientRect();
   dragState.offsetY = e.clientY - rect.top;
   dragState.startY = e.clientY;
+  dragState.lastEvent = null;
   dragState.lastDeltaY = 0;
   dragState.dragDirection = null;
   wrapper.style.display = "block";
@@ -1286,18 +1308,10 @@ function handleDragMove(list, e){
   if (!dragState.active || !dragState.dragEl) return;
   if (e && typeof e.preventDefault === "function") e.preventDefault();
   autoScrollOnDrag(e);
+  if (dragState.positions.length === 0) return;
   const rect = dragState.positions[dragState.startIndex];
   const rawDeltaY = e.clientY - dragState.startY;
-  const listRect = list.getBoundingClientRect();
-  let minDelta = listRect.top - rect.top;
-  let maxDelta = listRect.bottom - rect.bottom;
-  if (dragState.positions.length > 0) {
-    const groupTop = dragState.positions[0].top;
-    const groupBottom = dragState.positions[dragState.positions.length - 1].bottom;
-    minDelta = Math.max(minDelta, groupTop - rect.top);
-    maxDelta = Math.min(maxDelta, groupBottom - rect.bottom);
-  }
-  const deltaY = Math.max(minDelta, Math.min(rawDeltaY, maxDelta));
+  const deltaY = Math.max(dragState.minDelta, Math.min(rawDeltaY, dragState.maxDelta));
   dragState.dragEl.style.transform = `translateY(${deltaY}px)`;
   dragState.dragEl.style.zIndex = "3";
   dragState.dragEl.style.opacity = "0.95";
@@ -1407,8 +1421,9 @@ function applyItemTransforms(){
 function finalizeOrder(list){
   if (!dragState.dragEl) return;
   const start = dragState.startIndex;
-  let target = dragState.currentIndex;
-  if (target < 0) target = start;
+  const dragRect = dragState.dragEl.getBoundingClientRect();
+  const dragCenterY = dragRect.top + dragRect.height / 2;
+  let target = getTargetIndexFromPositions(dragCenterY, dragState.positions, start);
   const items = dragState.items;
   if (target !== start) {
     const reference = items[target];
