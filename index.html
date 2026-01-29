@@ -60,6 +60,13 @@ body.drag-cursor * {
 }
 .bill-content { display:flex; flex:1; flex-direction:column; gap:0.4rem; min-width:0; }
 .bill-details { display:none; flex-wrap:wrap; align-items:center; gap:0.4rem; row-gap:0.55rem; margin-top:0rem; width:100%; justify-content:space-between; }
+.bill-wrapper[data-pending="true"] .bill-details {
+  gap: 0.4rem;
+  justify-content: flex-start;
+}
+.bill-wrapper[data-pending="true"] .bill-details > * {
+  margin: 0;
+}
 .occurrence-chips,
 .occurrence-empty {
   margin-top:0;
@@ -409,9 +416,27 @@ input[type="number"] {
 #loginModal input { margin:0.5rem 0; }
 #loginModal button { background:#111; color:white; margin-top:1rem; }
 
+#loginModal .modal {
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 20px;
+  max-width: 400px;
+  align-items: stretch;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
 #authToggleText,
 #authToggleLink
   { font-size: 0.8rem; }
+
+.forgot-link {
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: #111;
+  border-bottom: 1px solid rgba(0,0,0,0.5);
+  padding-bottom: 2px;
+  font-size: 0.78rem;
+}
 
 .mobile-only { display: none; }
 @media (max-width: 768px) {
@@ -510,6 +535,10 @@ input[type="number"] {
     font-size: 0.85rem;
     padding: 0.7rem 0.5rem;
   }
+  .controls {
+    padding-bottom: calc(0.9rem + env(safe-area-inset-bottom) + 0.6rem);
+  }
+
 
   /* Hero section scaling */
   .hero-amount {
@@ -716,15 +745,15 @@ input[type="number"] {
     </div>
 
     <h3 id="authTitle">
-      <span class="welcome-text">Welcome</span> <span class="emoji">👋</span>
+      <span class="welcome-text">Welcome</span>
     </h3>
    
     <input type="email" id="authEmail" placeholder="Email" />
     <input type="password" id="authPassword" placeholder="Password" />
 
     <!-- Forgot password -->
-    <p id="forgotPasswordWrapper" style="text-align:center; margin-top:0.25rem; display:none; font-size:0.875rem;">
-      <a href="#" id="forgotPasswordLink" onclick="forgotPassword(event)">Forgot Password?</a>
+    <p id="forgotPasswordWrapper" style="text-align:center; margin-top:0.5rem; display:none; font-size:0.85rem;">
+      <a href="#" class="forgot-link" id="forgotPasswordLink" onclick="forgotPassword(event)">Forgot Password?</a>
     </p>
     
     <!-- Inline error message -->
