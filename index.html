@@ -483,139 +483,73 @@ input[type="number"] {
   transition: opacity 0.2s ease;
 }
 
-/* ================= MASTER MOBILE STYLES — DESKTOP PARITY ================= */
+/* ================= MOBILE: KEEP BILLS TABLE IDENTICAL TO DESKTOP ================= */
 @media (max-width: 768px) {
 
-  /* ---------- GLOBAL SCALE ---------- */
-  body {
-    padding: 1.2rem 0.7rem 6.5rem;
+  /* Optional: keep your overall page spacing if you like */
+  body { padding: 1.2rem 0.7rem 6.5rem; }
+  .container { width: 100%; margin: 0.6rem auto; padding: 0 0.5rem; }
+
+  /* IMPORTANT:
+     Do NOT restyle .bill*, .chip*, .icon-btn*, .bill-right*, etc.
+     Leaving them alone keeps mobile identical to desktop.
+  */
+  .controls {
+    padding-bottom: 1.1rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 
-  .container {
-    width: 100%;
-    margin: 0.6rem auto;
-    padding: 0 0.5rem;
+  /* ===== iOS form control color override (kills blue text) ===== */
+  :root { 
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* ---------- HERO ---------- */
-  .hero {
-    padding: 1.6rem;
+  /* Make selects + date inputs use your text color */
+  select,
+  input[type="date"]{
+    color: #111 !important;
+    -webkit-text-fill-color: #111; /* iOS/Safari */
   }
 
-  .hero-amount {
-    font-size: 2.3rem;
+  /* Ensure the *selected option* isn’t tinted */
+  select option{
+    color:#111;
   }
 
-  .hero-label,
-  .hero-sub {
-    font-size: 0.82rem;
+  /* If you’re using the pill-date style, reinforce it */
+  #billsModal .pill-date{
+    color:#3c3c3c !important;
+    -webkit-text-fill-color:#3c3c3c;
+    background: transparent;
   }
 
-  /* ---------- CONTEXT CARDS ---------- */
-  .context-card {
-    padding: 1rem;
+  /* Frequency select in the bills modal (if you want it gray like chips) */
+  #newBillFrequency{
+    color:#3c3c3c !important;
+    -webkit-text-fill-color:#3c3c3c;
   }
 
-  .context-value {
-    font-size: 1.15rem;
-  }
-
-  /* ---------- BILL LIST SCALE ONLY ---------- */
-  .bill {
-    padding: 0.4rem 0;
-  }
-
-  /* === CRITICAL ROW ALIGNMENT RULE === */
-  .bill-row {
-    flex-wrap: nowrap;       /* prevents stacking */
-    align-items: center;     /* vertical alignment */
-  }
-
-  .bill-content {
-    min-width: 0;            /* allows ellipsis */
-  }
-
-  .bill-name-input {
-    font-size: 16px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .bill-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-
-  .bill-amount,
-  .bill-amount-btn {
+  /* iOS Safari: prevent input zoom (must be 16px+) */
+  input,
+  select,
+  textarea,
+  button {
     font-size: 16px;
   }
 
-  /* ICONS — larger but same placement */
-  .icon-btn {
-    width: 34px;
-    height: 34px;
-  }
-
-  .icon-btn svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  /* CHIPS — proportional scaling */
-  .chip {
-    font-size: 0.75rem;
-    padding: 4px 8px;
-  }
-
-  .chip-occurrence {
-    font-size: 0.72rem;
-  }
-
-  /* ---------- MODALS ---------- */
-  .modal input,
-  .modal select,
-  .modal textarea,
-  .modal button {
-    font-size: 16px;
-    width: 100%;
-  }
-
-  /* ---------- PAY SCHEDULE (iOS FIX) ---------- */
-  #incomeModal input,
-  #incomeModal select,
-  #incomeModal button {
+  /* If you only want this for specific fields, use this instead: */
+  .bill-name-input,
+  #newBillAmount,
+  #newBillName,
+  #incomeAmount,
+  #nextPayday,
+  #incomeFrequency,
+  #newBillFrequency,
+  #newBillStart,
+  .inline-editor input,
+  .inline-editor select {
     font-size: 16px !important;
-    width: 100%;
-    min-width: 0;
-    -webkit-appearance: none;
-  }
-
-  #incomeModal input[type="date"] {
-    min-height: 40px;
-  }
-
-  /* ---------- CONTROLS BAR ---------- */
-  .controls button {
-    font-size: 0.9rem;
-    padding: 0.8rem 0.6rem;
-    min-height: 46px;
-  }
-
-  .controls svg {
-    width: 24px;
-    height: 24px;
-  }
-
-  /* ---------- MOBILE LABELS ---------- */
-  .mobile-only {
-    display: block;
-    font-size: 0.8rem;
-    color: #666;
-    margin-top: 0.3rem;
   }
 
 }
@@ -1161,11 +1095,19 @@ function updateBillFields(billId, fields){
   recalc();
 }
 
+function parseLocalDate(iso){
+  if (!iso) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d); // ✅ local midnight, no timezone shift
+}
+
 function formatBillDate(dateStr){
-  const d = dateStr ? new Date(dateStr) : null;
+  const d = parseLocalDate(dateStr);
   if (!d || isNaN(d.getTime())) return "Date";
   return d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
 }
+
 
 function capitalize(text){
   if (!text) return "";
