@@ -590,6 +590,10 @@ input[type="number"] {
   }
 }
 
+.bill-wrapper:not(:last-child) .bill {
+  border-bottom: 1px solid #eee;
+}
+
 </style>
 </head>
 <body>
@@ -1283,6 +1287,9 @@ function setupDragReorder(list){
     const row = wrapper.querySelector(".bill-row");
     if (!row) return;
 
+    if (row.dataset.dragBound === "1") return;
+    row.dataset.dragBound = "1";
+
     row.addEventListener("pointerdown", (e) => {
       if (e.target.closest("input, select, textarea, a")) return;
       if (wrapper.dataset.pending === "true") return;
@@ -1707,89 +1714,85 @@ function renderBills() {
     });
     billEl.appendChild(inner);
     list.appendChild(billEl);
-
-    if (i < uniqueBillsForDisplay.length - 1) {
-      const divider = document.createElement("div");
-      divider.className = "bill-divider";
-      list.appendChild(divider);
-    }
   });
 
   updateTotals(periodStart, periodEnd);
 
-  initSortable(list);
+  initReorder(list);
+}
 
+function isMobileView(){
+  return window.matchMedia("(max-width: 768px)").matches;
 }
 
 let sortableInstance = null;
 
-function initSortable(listEl){
-  if (!listEl) return;
-
-  // Destroy and recreate so it always matches the latest DOM
+function destroySortable(){
   if (sortableInstance) {
     sortableInstance.destroy();
     sortableInstance = null;
   }
-
-  sortableInstance = new Sortable(listEl, {
-    animation: 180,
-    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-    draggable: ".bill-wrapper",
-    handle: ".bill-row",              // touch anywhere on the row
-    filter: '[data-pending="true"]',  // don't drag placeholders
-    preventOnFilter: false,
-    delay: 300,
-    delayOnTouchOnly: true,
-    touchStartThreshold: 6,
-    direction: "vertical",
-
-    // Keep the divider lines from being draggable
-    onMove: (evt) => {
-      // disallow grabbing the divider element
-      if (evt.related && evt.related.classList && evt.related.classList.contains("bill-divider")) {
-        return false;
-      }
-      return true;
-    },
-
-    onStart: () => {
-      document.body.classList.add("drag-cursor");
-    },
-
-    onEnd: () => {
-      document.body.classList.remove("drag-cursor");
-
-      // Read the new order from the DOM (only bill wrappers, ignore dividers)
-      const orderedIds = Array.from(listEl.querySelectorAll(".bill-wrapper"))
-        .map(el => el.dataset.billId)
-        .filter(Boolean);
-
-      const pendingMap = new Map(pendingBills.map(b => [b.id, b]));
-      const billMap = new Map(bills.map(b => [b.id, b]));
-
-      const newPending = [];
-      const newBills = [];
-
-      orderedIds.forEach(id => {
-        if (pendingMap.has(id)) newPending.push(pendingMap.get(id));
-        else if (billMap.has(id)) newBills.push(billMap.get(id));
-      });
-
-      pendingBills = newPending;
-      bills = newBills;
-
-      // Mark as manual order and stop auto-sorts
-      manualOrder = true;
-      billFilters.sort = "none";
-      const sortSelect = document.getElementById("sortSelect");
-      if (sortSelect) sortSelect.value = "none";
-
-      saveUserData();
-      recalc();
-    }
-  });
 }
+
+function initReorder(listEl){
+  if (!listEl) return;
+
+  if (isMobileView()) {
+    // ✅ Mobile: SortableJS
+    // (Re)create Sortable each render so it matches the DOM
+    destroySortable();
+
+    sortableInstance = new Sortable(listEl, {
+      animation: 180,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      draggable: ".bill-wrapper",
+      handle: ".bill-row",
+      filter: '[data-pending="true"]',
+      preventOnFilter: false,
+      delay: 250,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 6,
+      direction: "vertical",
+
+      onStart: () => document.body.classList.add("drag-cursor"),
+      onEnd: () => {
+        document.body.classList.remove("drag-cursor");
+
+        const orderedIds = Array.from(listEl.querySelectorAll(".bill-wrapper"))
+          .map(el => el.dataset.billId)
+          .filter(Boolean);
+
+        const pendingMap = new Map(pendingBills.map(b => [b.id, b]));
+        const billMap = new Map(bills.map(b => [b.id, b]));
+
+        const newPending = [];
+        const newBills = [];
+
+        orderedIds.forEach(id => {
+          if (pendingMap.has(id)) newPending.push(pendingMap.get(id));
+          else if (billMap.has(id)) newBills.push(billMap.get(id));
+        });
+
+        pendingBills = newPending;
+        bills = newBills;
+
+        manualOrder = true;
+        billFilters.sort = "none";
+        const sortSelect = document.getElementById("sortSelect");
+        if (sortSelect) sortSelect.value = "none";
+
+        saveUserData();
+        recalc();
+      }
+    });
+
+  } else {
+    // ✅ Desktop: your original engine
+    destroySortable();
+    setupDragReorder(listEl);
+  }
+}
+
 
 function toggleBillDetails(billId){
   if (expandedBillIds.has(billId)) expandedBillIds.delete(billId);
