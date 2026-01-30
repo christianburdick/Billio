@@ -774,6 +774,8 @@ input[type="number"] {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyA0UCkq1LBiewo48_mDgFnd2zPs2BbSkfI",
@@ -834,6 +836,8 @@ let billFilters = {
   sort: "none",
   frequency: "all"
 };
+
+let userChoseSort = false;
 
 function generateId(){
   return `bill_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1543,6 +1547,14 @@ function renderBills() {
     occurrences: getBillOccurrencesInPeriod(b, periodStart, periodEnd)
   }));
 
+    // ✅ Mobile default: Highest → Lowest (only if user hasn't chosen a sort + hasn't manually reordered)
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  if (isMobile && !userChoseSort && !manualOrder) {
+    billFilters.sort = "amount-desc";
+    const sortSelect = document.getElementById("sortSelect");
+    if (sortSelect) sortSelect.value = "amount-desc";
+  }
+
   // Sort by selected option (respect manual order when no sort filter is applied)
   if (billFilters.sort !== "none") {
     billsWithNextDate.sort((a, b) => {
@@ -1705,8 +1717,78 @@ function renderBills() {
 
   updateTotals(periodStart, periodEnd);
 
-  setupDragReorder(list);
+  initSortable(list);
 
+}
+
+let sortableInstance = null;
+
+function initSortable(listEl){
+  if (!listEl) return;
+
+  // Destroy and recreate so it always matches the latest DOM
+  if (sortableInstance) {
+    sortableInstance.destroy();
+    sortableInstance = null;
+  }
+
+  sortableInstance = new Sortable(listEl, {
+    animation: 180,
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    draggable: ".bill-wrapper",
+    handle: ".bill-row",              // touch anywhere on the row
+    filter: '[data-pending="true"]',  // don't drag placeholders
+    preventOnFilter: false,
+    delay: 300,
+    delayOnTouchOnly: true,
+    touchStartThreshold: 6,
+    direction: "vertical",
+
+    // Keep the divider lines from being draggable
+    onMove: (evt) => {
+      // disallow grabbing the divider element
+      if (evt.related && evt.related.classList && evt.related.classList.contains("bill-divider")) {
+        return false;
+      }
+      return true;
+    },
+
+    onStart: () => {
+      document.body.classList.add("drag-cursor");
+    },
+
+    onEnd: () => {
+      document.body.classList.remove("drag-cursor");
+
+      // Read the new order from the DOM (only bill wrappers, ignore dividers)
+      const orderedIds = Array.from(listEl.querySelectorAll(".bill-wrapper"))
+        .map(el => el.dataset.billId)
+        .filter(Boolean);
+
+      const pendingMap = new Map(pendingBills.map(b => [b.id, b]));
+      const billMap = new Map(bills.map(b => [b.id, b]));
+
+      const newPending = [];
+      const newBills = [];
+
+      orderedIds.forEach(id => {
+        if (pendingMap.has(id)) newPending.push(pendingMap.get(id));
+        else if (billMap.has(id)) newBills.push(billMap.get(id));
+      });
+
+      pendingBills = newPending;
+      bills = newBills;
+
+      // Mark as manual order and stop auto-sorts
+      manualOrder = true;
+      billFilters.sort = "none";
+      const sortSelect = document.getElementById("sortSelect");
+      if (sortSelect) sortSelect.value = "none";
+
+      saveUserData();
+      recalc();
+    }
+  });
 }
 
 function toggleBillDetails(billId){
@@ -1893,6 +1975,9 @@ setInterval(updateTitleRandomly, 3000);
 function applyFilters() {
   billFilters.sort = document.getElementById("sortSelect").value;
   billFilters.frequency = document.getElementById("frequencyFilter").value;
+
+  userChoseSort = true;
+
   closeModal("filterModal");
   recalc();
 }
@@ -1906,6 +1991,8 @@ function resetFilters() {
   // Reset the billFilters object
   billFilters.sort = "none";
   billFilters.frequency = "all";
+
+  userChoseSort = false;
 
   // Re-render bills
   renderBills();
