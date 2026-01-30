@@ -296,85 +296,122 @@ input[type="number"] {
 }
 
 /* INCOME SHEET */
-#incomeModal {
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 0;
-  background: rgba(0,0,0,0.25);
+#incomeModal{
+  align-items:flex-end;
+  justify-content:flex-end;
+  padding:0;
+  background:rgba(0,0,0,0.25);
 }
-#incomeModal .sheet {
-  background: #fff;
-  width: min(420px, 100%);
-  border-radius: 20px 20px 0 0;
-  padding: 1.5rem;
-  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-  max-height: 70vh;
-  min-height: 50vh;
-  overflow-y: auto;
-  margin: 0 auto;
+
+#incomeModal .sheet{
+  background:#fff;
+  width:min(420px, 100%);
+  border-radius:20px 20px 0 0;
+  padding:1.5rem;
+  padding-bottom:calc(1.5rem + env(safe-area-inset-bottom));
+  box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  max-height:70vh;
+  min-height:50vh;
+  overflow-y:auto;
+  margin:0 auto;
 }
-#incomeModal .sheet-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+
+#incomeModal .sheet-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:0.5rem;
 }
-#incomeModal .sheet-row {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 0.75rem;
-  align-items: center;
+
+#incomeModal .sheet-row{
+  display:grid;
+  grid-template-columns:1fr 1.2fr;
+  gap:0.75rem;
+  align-items:center;
 }
-#incomeModal .sheet-label {
-  font-size: 0.85rem;
-  color: #222;
+
+#incomeModal .sheet-label{
+  font-size:0.85rem;
+  color:#222;
 }
-#incomeModal .sheet-divider {
-  height: 1px;
-  background: #e5e5ea;
-  margin: 0.75rem 0;
+
+/* ✅ KEY: prevent grid children from "shrink-to-fit" weirdness on iOS */
+#incomeModal .sheet-row > *{
+  min-width:0;
 }
+
+/* ✅ Unified input styling (text/select/date all match) */
 #incomeModal .sheet input,
-#incomeModal .sheet select {
-  width: 100%;
-  min-width: 220px;
-  max-width: 100%;
-  padding: 0.5rem;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  box-sizing: border-box;
-}
-#incomeModal .inline-error {
-  margin-top: 0.75rem;
-  font-size: 0.8rem;
-  color: #c62828;
-  min-height: 1em;
-}
-#incomeModal .sheet button {
-  width: 100%;
-  background: #111;
-  color: #fff;
-  border-radius: 12px;
-  padding: 0.7rem;
-  margin-top: 1rem;
-  border: none;
+#incomeModal .sheet select{
+  width:100%;
+  min-width:0;              /* override the old 220px so it aligns in grid */
+  max-width:100%;
+  padding:0.5rem;
+  height:40px;              /* consistent height across controls */
+  line-height:1.2;
+  margin:0;
+  border-radius:8px;
+  border:1px solid #ddd;
+  box-sizing:border-box;
+  background:#fff;
+  color:#111;
+  -webkit-text-fill-color:#111; /* iOS text color */
+  -webkit-appearance:none;
+  appearance:none;
+  justify-self:stretch;     /* make it fill its grid column */
 }
 
-.date-field {
-  width: 100%;
-  overflow: hidden;
-  border-radius: 8px;
+/* ✅ iOS date input gets extra special handling */
+#incomeModal .sheet input[type="date"]{
+  text-align:left;
 }
 
-.date-field input[type="date"] {
-  width: 100%;
-  max-width: 100%;  
-  min-height: 35px;
-  display: block;
-  box-sizing: border-box;
-  -webkit-appearance: none;
-  appearance: none;
+/* dividers + error + button */
+#incomeModal .sheet-divider{
+  height:1px;
+  background:#e5e5ea;
+  margin:0.75rem 0;
+}
+
+#incomeModal .inline-error{
+  margin-top:0.75rem;
+  font-size:0.8rem;
+  color:#c62828;
+  min-height:1em;
+}
+
+#incomeModal .sheet button{
+  width:100%;
+  background:#111;
+  color:#fff;
+  border-radius:12px;
+  padding:0.7rem;
+  margin-top:1rem;
+  border:none;
+}
+
+/* If you're using a wrapper like .date-field elsewhere, keep it consistent */
+.date-field{
+  width:100%;
+  overflow:hidden;
+  border-radius:8px;
+}
+
+.date-field input[type="date"]{
+  width:100%;
+  max-width:100%;
+  min-height:40px;          /* match height */
+  padding:0.5rem;           /* match padding */
+  margin:0;
+  display:block;
+  border-radius:8px;
+  border:1px solid #ddd;
+  box-sizing:border-box;
+  background:#fff;
+  color:#111;
+  -webkit-text-fill-color:#111;
+  -webkit-appearance:none;
+  appearance:none;
 }
 
 /* New bill date pill */
