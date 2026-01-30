@@ -537,6 +537,10 @@ input[type="number"] {
     padding-right: 1.5rem;
   }
 
+  .bill {
+    padding: 1rem 0rem;
+  }
+
   /* ===== iOS form control color override (kills blue text) ===== */
   :root { 
     -webkit-tap-highlight-color: transparent;
@@ -593,6 +597,114 @@ input[type="number"] {
 .bill-wrapper:not(:last-child) .bill {
   border-bottom: 1px solid #eee;
 }
+
+/* ================= FILTER SHEET (MATCH PAY SCHEDULE) ================= */
+#filterModal{
+  align-items:flex-end;
+  justify-content:flex-end;
+  padding: 0rem;
+  background:rgba(0,0,0,0.25);
+}
+
+#filterModal .sheet{
+  background:#fff;
+  width:min(420px, 100%);
+  border-radius:20px 20px 0 0;
+  padding:1.5rem;
+  padding-top: 2.75rem;
+  padding-bottom:calc(1.5rem + env(safe-area-inset-bottom));
+  box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  max-height:70vh;
+  min-height:50vh;
+  overflow-y:auto;
+  margin:0 auto;
+}
+
+/* Use the SAME row geometry as income sheet */
+#filterModal .sheet-row{
+  display:grid;
+  grid-template-columns:1fr 1.2fr;
+  gap:0.75rem;
+  align-items:center;
+}
+
+#filterModal .sheet-label{
+  font-size:0.85rem;
+  color:#222;
+}
+
+/* prevent iOS grid shrink weirdness */
+#filterModal .sheet-row > *{
+  min-width:0;
+}
+
+/* Match the exact control styling */
+#filterModal .sheet select{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  padding:0.5rem;
+  height:40px;
+  line-height:1.2;
+  margin:0;
+  border-radius:8px;
+  border:1px solid #ddd;
+  box-sizing:border-box;
+  background:#fff;
+  color:#111;
+  -webkit-text-fill-color:#111;
+  -webkit-appearance:none;
+  appearance:none;
+  justify-self:stretch;
+}
+
+/* Match divider lines exactly */
+#filterModal .sheet-divider{
+  height:1px;
+  background:#e5e5ea;
+  margin:0.75rem 0;
+}
+
+/* Match button exactly */
+#filterModal .sheet button{
+  width:100%;
+  background:#111;
+  color:#fff;
+  border-radius:12px;
+  padding:0.7rem;
+  margin-top: 2.5rem;
+  border:none;
+  cursor:pointer;
+}
+
+/* Reset as subtle secondary action */
+#filterModal .sheet-reset{
+  text-align:center;
+  margin-top:1rem;
+  font-size:0.8rem;
+  color:#666;
+  cursor:pointer;
+}
+
+/* ===== FILTER SHEET HEADER FIX ===== */
+#filterModal .sheet-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+#filterModal .sheet-header h3{
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+#filterModal .close-btn{
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 
 </style>
 </head>
@@ -714,31 +826,37 @@ input[type="number"] {
 </div>
 
 <div class="modal-overlay" id="filterModal">
-  <div class="modal">
-    <div class="modal-header">
+  <div class="sheet">
+    <div class="sheet-header">
       <h3>Filter Bills</h3>
       <span class="close-btn" onclick="closeModal('filterModal')">&times;</span>
     </div>
 
-    <label class="input-label">Sort by</label>
-    <select id="sortSelect">
-      <option value="none">Closest → Farthest</option>
-      <option value="amount-desc">Highest → Lowest</option>
-      <option value="amount-asc">Lowest → Highest</option>
-    </select>
+    <div class="sheet-row">
+      <span class="sheet-label">Sort</span>
+      <select id="sortSelect">
+        <option value="none">Closest → Farthest</option>
+        <option value="amount-desc">Highest → Lowest</option>
+        <option value="amount-asc">Lowest → Highest</option>
+      </select>
+    </div>
 
-    <label class="input-label">Frequency</label>
-    <select id="frequencyFilter">
-      <option value="all">All</option>
-      <option value="once">One-time</option>
-      <option value="weekly">Weekly</option>
-      <option value="biweekly">Biweekly</option>
-      <option value="monthly">Monthly</option>
-    </select>
+    <div class="sheet-divider"></div>
 
+    <div class="sheet-row">
+      <span class="sheet-label">Frequency</span>
+      <select id="frequencyFilter">
+        <option value="all">All</option>
+        <option value="once">One-time</option>
+        <option value="weekly">Weekly</option>
+        <option value="biweekly">Biweekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
 
     <button onclick="applyFilters()">Apply Filters</button>
-    <p style="text-align:center; margin-top:0.5rem; font-size:0.75rem; color:#111; cursor:pointer;" onclick="resetFilters()">Reset</p>
+
+    <p class="sheet-reset" onclick="resetFilters()">Reset</p>
   </div>
 </div>
 
