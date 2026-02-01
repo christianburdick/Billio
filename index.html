@@ -1271,6 +1271,31 @@ function formatBillDate(dateStr){
 }
 
 
+function addMonthsKeepingSameDay(date, months) {
+  const result = new Date(date);
+  const day = result.getDate();
+  result.setDate(1);
+  result.setMonth(result.getMonth() + months);
+  const daysInTargetMonth = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, daysInTargetMonth));
+  return result;
+}
+
+function getPeriodEnd(periodStart, frequency) {
+  if (frequency === "once") return new Date(periodStart);
+  if (frequency === "weekly") {
+    const end = new Date(periodStart);
+    end.setDate(periodStart.getDate() + 6);
+    return end;
+  }
+  if (frequency === "biweekly") {
+    const end = new Date(periodStart);
+    end.setDate(periodStart.getDate() + 13);
+    return end;
+  }
+  return addMonthsKeepingSameDay(periodStart, 1);
+}
+
 function capitalize(text){
   if (!text) return "";
   if (text === "once") return "One-time";
@@ -1649,14 +1674,7 @@ function renderBills() {
   const [yStart, mStart, dStart] = income.nextPayday.split("-");
   const periodStart = new Date(yStart, mStart - 1, dStart);
 
-  const periodEnd = new Date(periodStart);
-  if (income.frequency === "once") {
-  // one-day period
-  periodEnd.setDate(periodStart.getDate());
-  }
-  if (income.frequency === "weekly") periodEnd.setDate(periodStart.getDate() + 6);
-  if (income.frequency === "biweekly") periodEnd.setDate(periodStart.getDate() + 13);
-  if (income.frequency === "monthly") periodEnd.setMonth(periodStart.getMonth() + 1, 0);
+  const periodEnd = getPeriodEnd(periodStart, income.frequency);
 
 
   // Apply frequency filter
@@ -1742,6 +1760,17 @@ function renderBills() {
       })
       .join("");
     const hasDueInPeriod = occurrenceChips.length > 0;
+    const nextOccurrence = !isPending ? getNextBillDate(b, periodStart) : null;
+    const fallbackAnchor = !nextOccurrence && !isPending && b.date ? parseLocalDate(b.date) : null;
+    const futureDate = nextOccurrence || fallbackAnchor;
+    let nextOccurrenceChip = "";
+    if (!isPending && !hasDueInPeriod && futureDate) {
+      const iso = `${futureDate.getFullYear()}-${String(futureDate.getMonth()+1).padStart(2,"0")}-${String(futureDate.getDate()).padStart(2,"0")}`;
+      nextOccurrenceChip = `<button class="chip chip-occurrence" data-occurrence="${iso}" data-bill="${b.id}" aria-label="Set anchor date">${futureDate.toLocaleDateString("en-US",{month:"short", day:"numeric"})}</button>`;
+    }
+    const occurrenceChipsMarkup = (occurrenceChips || nextOccurrenceChip)
+      ? `<div class="occurrence-chips">${occurrenceChips}${nextOccurrenceChip}</div>`
+      : "";
     const noDueDate = !isPending && (!b.date || !hasDueInPeriod);
     if (noDueDate) billEl.classList.add("no-due");
     if (!isPending) billEl.dataset.group = noDueDate ? "nodue" : "due";
@@ -1757,8 +1786,8 @@ function renderBills() {
             <button class="chip chip-btn chip-rect" data-edit="frequency" data-bill="${b.id}" aria-label="Edit frequency">${freqLabel}</button>
             ${isPending
               ? `<button class="chip chip-btn" data-edit="date" data-bill="${b.id}" aria-label="Edit anchor date">${dueLabel}</button>`
-              : (occurrenceChips
-                  ? `<div class="occurrence-chips">${occurrenceChips}</div>`
+              : (occurrenceChipsMarkup
+                  ? occurrenceChipsMarkup
                   : ``)}
           </div>
         </div>
@@ -1938,13 +1967,8 @@ function getBillOccurrencesInPeriod(bill, periodStart, periodEnd){
   if (bill.frequency === "monthly") {
     // advance month-by-month until we reach the pay period
     while (current < periodStart) {
-      current = new Date(
-        current.getFullYear(),
-        current.getMonth() + 1,
-        current.getDate()
-      );
+      current = addMonthsKeepingSameDay(current, 1);
     }
-
     if (current >= periodStart && current <= periodEnd) {
       occurrences.push(new Date(current));
     }
@@ -1978,21 +2002,17 @@ function getNextBillDate(bill, ref){
   }
 
   if (bill.frequency === "monthly") {
+    while (current < ref) {
+      current = addMonthsKeepingSameDay(current, 1);
+    }
+    return current;
+  }
+
+  const step = { weekly: 7, biweekly: 14 }[bill.frequency] || 14;
   while (current < ref) {
-    current = new Date(
-      current.getFullYear(),
-      current.getMonth() + 1,
-      current.getDate()
-    );
+    current.setDate(current.getDate() + step);
   }
   return current;
-}
-
-const step = { weekly: 7, biweekly: 14 }[bill.frequency] || 14;
-while (current < ref) {
-  current.setDate(current.getDate() + step);
-}
-return current;
 }
 
 // Totals calculation
@@ -2002,37 +2022,25 @@ function updateTotals(start,end){
     if (!b.date) return;
     const amount = Number(b.amount);
     if (isNaN(amount)) return;
-    const [y2,m2,d2]=b.date.split("-");
-    let c=new Date(y2,m2-1,d2);
-    if (isNaN(c.getTime())) return;
-    let count = 0;
-
-    // ONCE
-    if (b.frequency === "once") {
-      if (c >= start && c <= end) count = 1;
-    }
-    // MONTHLY
-    else if (b.frequency === "monthly") {
-      if (c >= start && c <= end) count = 1;
-    }
-    // WEEKLY / BIWEEKLY
-    else {
-      const step = { weekly: 7, biweekly: 14 }[b.frequency] || 14;
-      while (c <= end) {
-        if (c >= start) count++;
-        c.setDate(c.getDate() + step);
-      }
-    }
-
-    
-    totalBills += count*amount;
+    const occurrences = getBillOccurrencesInPeriod(b, start, end);
+    totalBills += occurrences.length * amount;
   });
 
-  const spending = income.amount-totalBills;
-  document.getElementById("spendingLeft").textContent=`$${spending.toFixed(2)}`;
-  document.getElementById("spendingLeft").className="hero-amount"+(spending<0?" negative":"");
-  document.getElementById("incomeValue").textContent=`$${income.amount.toFixed(2)}`;
-  document.getElementById("billsValue").textContent=`$${totalBills.toFixed(2)}`;
+  const incomeAmount = Number.isFinite(Number(income.amount)) ? Number(income.amount) : 0;
+  const spending = incomeAmount - totalBills;
+  const heroEl = document.getElementById("spendingLeft");
+  if (heroEl) {
+    heroEl.textContent = `$${spending.toFixed(2)}`;
+    heroEl.className = "hero-amount" + (spending < 0 ? " negative" : "");
+  }
+  const incomeValueEl = document.getElementById("incomeValue");
+  if (incomeValueEl) {
+    incomeValueEl.textContent = `$${incomeAmount.toFixed(2)}`;
+  }
+  const billsValueEl = document.getElementById("billsValue");
+  if (billsValueEl) {
+    billsValueEl.textContent = `$${totalBills.toFixed(2)}`;
+  }
 }
 
 function editBill(billId){
